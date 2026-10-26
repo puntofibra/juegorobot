@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>LUCAS 5G · Futurmovil</title>
+<meta name="description" content="Vuela con Lucas, el robot de Futurmovil, esquiva láseres y virus y entra en el ranking semanal.">
+<meta name="theme-color" content="#05060f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lucas 5G">
+<meta property="og:title" content="LUCAS 5G · Futurmovil">
+<meta property="og:description" content="¿Superas mi puntuación? Vuela con Lucas y entra en el ranking.">
+<meta property="og:image" content="img/icon-512.png">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="img/icon-192.png">
+<link rel="apple-touch-icon" href="img/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="fx"></div>
+<div id="flash"></div>
+
+<!-- Botones fijos -->
+<button id="btnSonido" class="ico tl" aria-label="Sonido"></button>
+<button id="btnMusica" class="ico tl2" aria-label="Música"></button>
+<button id="btnPausa" class="ico tr oculto" aria-label="Pausa">
+  <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+</button>
+
+<!-- HUD -->
+<div id="hud" class="oculto">
+  <div class="hudPts"><span id="hPts">0</span><small>PUNTOS</small></div>
+  <div class="hudSub"><span id="hM">0</span> m <i></i> <span id="hD">0</span> datos</div>
+  <div id="hCombo"></div>
+  <div id="hPw"></div>
+</div>
+<div id="banner"></div>
+<div id="cuenta"></div>
+
+<!-- Carga -->
+<section id="sCarga" class="screen show">
+  <div class="carga">
+    <img src="img/portatil.webp" alt="Lucas" class="lucasImg flota">
+    <div class="cargaTxt">INICIANDO SISTEMAS<span class="dots"></span></div>
+    <div class="barra"><i id="cargaBar"></i></div>
+  </div>
+</section>
+
+<!-- Menú -->
+<section id="sMenu" class="screen">
+  <div class="menu">
+    <div class="hero">
+      <div class="bocadillo" id="bocadillo">¡Hola! Soy Lucas</div>
+      <div class="halo"></div>
+      <img src="img/saluda.webp" alt="Lucas saludando" class="lucasImg flota grande">
+    </div>
+    <div class="panel">
+      <div class="logo" data-t="FUTURMOVIL">FUTURMOVIL</div>
+      <div class="powered">powered by <b>Puntofibra</b></div>
+      <div class="titulo"><span>presenta</span><b>LUCAS<em>5G</em></b></div>
+      <div class="record">Tu récord: <b id="mRecord">0</b></div>
+      <input id="nombre" maxlength="16" placeholder="Tu nombre para el ranking" autocomplete="nickname">
+      <button id="btnJugar" class="btn jugar"><span>JUGAR</span></button>
+      <div class="fila">
+        <button id="btnRanking" class="btn sec">Ranking</button>
+        <button id="btnAyuda" class="btn sec">Cómo se juega</button>
+      </div>
+      <div class="fila">
+        <button id="btnCompartir" class="btn ter">Compartir</button>
+        <button id="btnInstalar" class="btn ter">Instalar app</button>
+      </div>
+      <div id="temporada" class="temporada oculto"><img alt=""><span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Ayuda -->
+<section id="sAyuda" class="screen">
+  <div class="card ancha">
+    <img src="img/senala.webp" alt="Lucas señalando" class="lucasImg lado">
+    <div>
+      <h2>Cómo se juega</h2>
+      <ul class="ayuda">
+        <li><b>Mantén pulsado</b> (pantalla, ratón o espacio) para que Lucas suba. Suelta para bajar.</li>
+        <li>Recoge <b class="v">datos</b> seguidos para hacer combos y multiplicar los puntos.</li>
+        <li>Esquiva <b class="r">láseres</b>, <b class="m">virus</b> y <b class="r">misiles</b>. Pasar rozando un láser da puntos extra.</li>
+      </ul>
+      <div class="pws" id="ayudaPw"></div>
+      <button class="btn jugar peq" data-cerrar>¡Entendido!</button>
+    </div>
+  </div>
+</section>
+
+<!-- Pausa -->
+<section id="sPausa" class="screen">
+  <div class="card">
+    <img src="img/switch.webp" alt="Lucas jugando" class="lucasImg media">
+    <h2>PAUSA</h2>
+    <button id="btnSeguir" class="btn jugar peq">Continuar</button>
+    <button id="btnSalir" class="btn sec">Salir al menú</button>
+  </div>
+</section>
+
+<!-- Fin -->
+<section id="sFin" class="screen">
+  <div class="card ancha fin">
+    <div class="finImg"><img id="finImg" src="img/duda.webp" alt="Lucas" class="lucasImg media"></div>
+    <div class="finDatos">
+      <h2 id="finTit">FIN DE LA PARTIDA</h2>
+      <div class="stats">
+        <div><b id="fPts">0</b><small>puntos</small></div>
+        <div><b id="fM">0</b><small>metros</small></div>
+        <div><b id="fD">0</b><small>datos</small></div>
+        <div><b id="fBest">0</b><small>récord</small></div>
+      </div>
+      <div class="envio" id="envio"></div>
+      <div class="fila nombreFila oculto" id="finNombre">
+        <input id="nombre2" maxlength="16" placeholder="Tu nombre">
+        <button id="btnGuardar" class="btn sec">Guardar</button>
+      </div>
+      <button id="btnOtra" class="btn jugar peq">Otra vez</button>
+      <div class="fila">
+        <button id="btnFinRank" class="btn sec">Ranking</button>
+        <button id="btnFinComp" class="btn sec">Compartir</button>
+      </div>
+      <button id="btnFinMenu" class="btn ter">Menú</button>
+    </div>
+  </div>
+</section>
+
+<!-- Ranking -->
+<section id="sRanking" class="screen">
+  <div class="card ancha">
+    <img src="img/mando.webp" alt="Lucas con mando" class="lucasImg lado">
+    <div class="rk">
+      <h2>Ranking</h2>
+      <div class="tabs"><button class="tab on" data-tab="semana">Esta semana</button><button class="tab" data-tab="total">Histórico</button></div>
+      <div id="premio" class="premio oculto"></div>
+      <ol id="rkLista" class="rkLista"></ol>
+      <button class="btn jugar peq" data-cerrar>Cerrar</button>
+    </div>
+  </div>
+</section>
+
+<!-- Instalar iPhone -->
+<section id="sIos" class="screen">
+  <div class="card">
+    <img src="img/telefono.webp" alt="Lucas con móvil" class="lucasImg media">
+    <h2>Instalar en iPhone</h2>
+    <p class="txt">En Safari, pulsa el botón <b>Compartir</b> (el cuadrado con la flecha hacia arriba) y elige <b>«Añadir a pantalla de inicio»</b>.</p>
+    <button class="btn jugar peq" data-cerrar>Vale</button>
+  </div>
+</section>
+
+<div id="toast"></div>
+<script src="game.js?v=1"></script>
+</body>
+</html>
