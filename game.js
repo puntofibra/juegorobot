@@ -4,7 +4,7 @@
 'use strict';
 const CFG = {
   API: 'https://script.google.com/macros/s/AKfycbz-jBZwrOqy0Lz7Ln49xJAnjGpg8UPaGiF680tAHkLQnQDG75Y77mFFylLvtGhEXAu3/exec',
-  GOOGLE: '',         // ID de cliente OAuth para «Entrar con Google»
+  GOOGLE: '454055120059-nuhaop4r62urc3u036cc3grpqo71ulg7.apps.googleusercontent.com',         // ID de cliente OAuth para «Entrar con Google»
   URL: 'https://puntofibra.github.io/juegorobot/',
   SAL: 'lucas5g-fm'
 };
