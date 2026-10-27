@@ -284,8 +284,10 @@ function resize() {
 
 const top_ = () => CEIL + 52, bot_ = () => GROUND - 50;
 /* Lucas volando (superlucas): tamaño en pantalla y zonas de choque */
-const LH = 96, LW = LH * 720 / 315, AX = 0.62, AY = 0.52;      // ancla = centro del cuerpo
-const HITC = [[19, -14, 25], [-12, 13, 26], [61, 3, 10]].map(c => c.map(v => v * LH / 84));     // cabeza, cuerpo, puño [dx, dy, r]
+const LH = 100, LW = LH * 720 / 361, AX = 0.62, AY = 0.60;     // ancla = centro del cuerpo
+const HITC = [[20, -20, 27], [-10, 14, 26], [64, 0, 11]];
+const NOZZ = [[.295, .76, 1], [.33, .855, .9]];                   // toberas (x, y relativos a la imagen, escala)
+const FLAME_ANG = Math.PI + 0.14;                                // hacia atrás y un poco abajo     // cabeza, cuerpo, puño [dx, dy, r]
 function lucasCircles() {
   const cs = Math.cos(L.rot), sn = Math.sin(L.rot), x = camX + PX, y = L.y;
   return HITC.map(([dx, dy, r]) => [x + dx * cs - dy * sn, y + dx * sn + dy * cs, r]);
@@ -586,13 +588,15 @@ function updLucas(dt, rdt) {
   // llamas del propulsor (salen hacia atrás, a la izquierda)
   const cs = Math.cos(L.rot), sn = Math.sin(L.rot);
   const turbo = pw.turbo > 0;
-  [[.30, .70], [.40, .90]].forEach(([rx, ry]) => {
-    const ox = (rx - AX) * LW, oy = (ry - AY) * LH;
+  L.fl = lerp(L.fl || .5, turbo ? 1.7 : thr ? 1.15 : .5, Math.min(1, dt * 10));
+  NOZZ.forEach(([rx, ry, kk]) => {
+    const fl = L.fl * 78 * kk * .55;
+    const ox = (rx - AX) * LW + Math.cos(FLAME_ANG) * fl, oy = (ry - AY) * LH + Math.sin(FLAME_ANG) * fl;
     const wx = camX + PX + L.inX + ox * cs - oy * sn, wy = L.y + ox * sn + oy * cs;
-    const n = thr ? (turbo ? 3 : 2) : 1;
+    const n = thr ? (turbo ? 2 : 1) : (Math.random() < .5 ? 1 : 0);
     for (let k = 0; k < n; k++) {
-      const v = thr ? rnd(380, 620) : rnd(140, 240), a = L.rot + Math.PI - (thr ? rnd(.15, .45) : rnd(-.1, .15));
-      P(wx + rnd(-3, 3), wy + rnd(-3, 3), Math.cos(a) * v, Math.sin(a) * v, thr ? rnd(.2, .36) : rnd(.12, .22), thr ? rnd(9, 15) : rnd(5, 9),
+      const v = thr ? rnd(300, 520) : rnd(120, 220), a = L.rot + FLAME_ANG + rnd(-.25, .25);
+      P(wx + rnd(-3, 3), wy + rnd(-3, 3), Math.cos(a) * v, Math.sin(a) * v, thr ? rnd(.18, .32) : rnd(.1, .18), thr ? rnd(7, 12) : rnd(4, 7),
         turbo ? pick(['#ffd23f', '#ffffff', '#19ff6a']) : pick(['#19ff6a', '#19ff6a', '#7dffb0', '#00e5ff']), 'glow', { drag: 2.5 });
     }
     if (thr && Math.random() < .25) P(wx, wy, rnd(-600, -300), rnd(40, 200), .25, 1.5, '#d9ffe8', 'spark', { drag: 1 });
@@ -783,6 +787,33 @@ function drawParts() {
   }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 }
+
+/* ---- llamas del propulsor dibujadas (en coordenadas del sprite) ---- */
+function jetFlame(g, x, y, ang, w, L, wob, stops) {
+  g.save(); g.translate(x, y); g.rotate(ang);
+  const gr = g.createLinearGradient(0, 0, L, 0); stops.forEach(([o, c]) => gr.addColorStop(o, c));
+  g.fillStyle = gr; g.beginPath(); g.moveTo(0, -w / 2);
+  g.bezierCurveTo(L * .35, -w / 2, L * .7, -w * .2 + wob * .5, L, wob);
+  g.bezierCurveTo(L * .7, w * .2 + wob * .5, L * .35, w / 2, 0, w / 2);
+  g.closePath(); g.fill(); g.restore();
+}
+function drawJetFlames(t) {
+  const turbo = pw.turbo > 0 && state === 'play', f = L.fl || .5;
+  ctx.globalCompositeOperation = 'lighter';
+  NOZZ.forEach(([rx, ry, k], i) => {
+    const x = (rx - AX) * LW, y = (ry - AY) * LH, w = 17 * k;
+    const len = (78 + Math.sin(t * 31 + i * 2) * 6 + Math.sin(t * 47 + i) * 4 + Math.random() * 6) * f * k;
+    const wob = (Math.sin(t * 17 + i * 1.7) + Math.sin(t * 33 + i) * .5) * w * .2;
+    const mid = turbo ? 'rgba(255,210,63,' : 'rgba(25,255,106,', edge = turbo ? 'rgba(255,140,40,0)' : 'rgba(0,229,255,0)';
+    ctx.globalAlpha = .9;
+    ctx.drawImage(glowSpr(turbo ? '#ffd23f' : '#19ff6a'), x - len * .9, y - w * 1.6, len * 1.3, w * 3.2);
+    ctx.globalAlpha = 1;
+    jetFlame(ctx, x, y, FLAME_ANG, w * 1.8, len * 1.3, wob * 1.4, [[0, mid + '.5)'], [.45, mid + '.3)'], [1, edge]]);
+    jetFlame(ctx, x, y, FLAME_ANG, w * 1.1, len, wob, [[0, 'rgba(255,255,255,.95)'], [.2, 'rgba(210,255,230,.9)'], [.55, mid + '.75)'], [1, mid + '0)']]);
+    jetFlame(ctx, x, y, FLAME_ANG, w * .55, len * .5, wob * .4, [[0, 'rgba(255,255,255,1)'], [.7, 'rgba(240,255,245,.7)'], [1, 'rgba(255,255,255,0)']]);
+  });
+  ctx.globalCompositeOperation = 'source-over';
+}
 function drawLucas(t) {
   if (!L.vis || !IMG.superlucas.complete) return;
   const im = IMG.superlucas, h = LH, w = LW, ax = -AX * w, ay = -AY * h;
@@ -799,12 +830,13 @@ function drawLucas(t) {
   ctx.globalCompositeOperation = 'lighter';
   const pul = 1 + Math.sin(t * 5) * .06;
   ctx.globalAlpha = pw.turbo > 0 ? .55 : .4; const gc = pw.turbo > 0 ? '#ffd23f' : '#19ff6a';
-  ctx.drawImage(glowSpr(gc), x - 120 * pul, y - 80 * pul, 220 * pul, 160 * pul);
+  ctx.drawImage(glowSpr(gc), x - 110 * pul, y - 80 * pul, 210 * pul, 160 * pul);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   // cuerpo
   const blink = pw.invul > 0 && Math.floor(t * 14) % 2 === 0;
   if (!blink) {
     ctx.save(); ctx.translate(x, y + Math.sin(t * 3) * 2); ctx.rotate(L.rot); ctx.scale(L.sy, L.sx);
+    drawJetFlames(t);
     ctx.drawImage(im, ax, ay, w, h); ctx.restore();
   }
   // escudo
@@ -1128,7 +1160,7 @@ function loop(now) {
   if (state === 'menu' || state === 'load') drawHeroFire(dt, now / 1000);
   requestAnimationFrame(loop);
 }
-resize(); paintSnd(); temporada();
+resize(); paintSnd();
 const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
 loadImages(() => {
   Promise.race([fontsReady, new Promise(r => setTimeout(r, 2500))]).then(() => {
