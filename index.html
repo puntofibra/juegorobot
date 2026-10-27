@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>LUCAS 5G · Futurmovil</title>
+<title>LUCASBOT 5G · Futurmovil</title>
 <meta name="description" content="Vuela con Lucas, el robot de Futurmovil, esquiva láseres y virus y entra en el ranking semanal.">
 <meta name="theme-color" content="#05060f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Lucas 5G">
-<meta property="og:title" content="LUCAS 5G · Futurmovil">
+<meta property="og:title" content="LUCASBOT 5G · Futurmovil">
 <meta property="og:description" content="¿Superas mi puntuación? Vuela con Lucas y entra en el ranking.">
 <meta property="og:image" content="img/icon-512.png">
 <link rel="manifest" href="manifest.json">
@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -63,9 +63,8 @@
       </div>
     </div>
     <div class="panel">
-      <div class="logo" data-t="FUTURMOVIL">FUTURMOVIL</div>
-      <div class="powered">powered by <b>Puntofibra</b></div>
-      <div class="titulo"><span>presenta</span><b>LUCAS<em>5G</em></b></div>
+      <div class="logoWrap"><img src="img/logo.webp" alt="FuturMovil" class="logoImg"><i class="logoBrillo"></i></div>
+      <div class="titulo"><span>presenta</span><b>LUCASBOT<em>5G</em></b></div>
       <div class="record">Tu récord: <b id="mRecord">0</b></div>
       <input id="nombre" maxlength="16" placeholder="Tu nombre para el ranking" autocomplete="nickname">
       <button id="btnJugar" class="btn jugar"><span>JUGAR</span></button>
@@ -160,6 +159,6 @@
 </section>
 
 <div id="toast"></div>
-<script src="game.js?v=9"></script>
+<script src="game.js?v=10"></script>
 </body>
 </html>

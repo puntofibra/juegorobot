@@ -120,7 +120,7 @@ h2{font-family:Orbitron;font-weight:900;letter-spacing:.1em;font-size:24px;margi
 .powered b{color:var(--c);text-shadow:0 0 8px var(--c)}
 .titulo{display:flex;flex-direction:column;align-items:center;margin:2px 0}
 .titulo span{font-size:13px;letter-spacing:.5em;text-transform:uppercase;color:#8ab}
-.titulo b{font-family:Orbitron;font-weight:900;font-size:clamp(34px,5vw,56px);letter-spacing:.08em;
+.titulo b{font-family:Orbitron;font-weight:900;font-size:clamp(28px,4.2vw,46px);letter-spacing:.06em;white-space:nowrap;
   background:linear-gradient(90deg,#fff,var(--c) 40%,var(--m));-webkit-background-clip:text;background-clip:text;color:transparent;
   filter:drop-shadow(0 0 12px rgba(0,229,255,.5))}
 .titulo em{font-style:normal;margin-left:.2em;color:var(--v);-webkit-text-fill-color:var(--v);text-shadow:0 0 14px var(--v)}
@@ -222,3 +222,18 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
 .fin .lucasImg.media.caido{height:auto;width:300px;max-width:100%;animation:mareo 2.6s ease-in-out infinite;transform-origin:50% 90%}
 @keyframes mareo{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2.5deg) translateY(2px)}}
 @media (orientation:portrait){.fin .lucasImg.media.caido{width:210px}}
+
+/* Logo FuturMovil con neón azul */
+.logoWrap{position:relative;width:min(100%,400px);margin:0 auto 4px;aspect-ratio:1940/362;animation:logoIn 1s cubic-bezier(.2,1.4,.4,1) both}
+.logoImg{display:block;width:100%;height:auto;image-rendering:auto;
+  filter:drop-shadow(0 0 1px #bff4ff) drop-shadow(0 0 6px rgba(0,229,255,.95)) drop-shadow(0 0 16px rgba(0,170,255,.7)) drop-shadow(0 0 34px rgba(0,120,255,.45));
+  animation:neonAzul 3.2s ease-in-out infinite, flickAzul 9s infinite}
+.logoBrillo{position:absolute;inset:0;pointer-events:none;
+  -webkit-mask:url(img/logo.webp) center/100% 100% no-repeat;mask:url(img/logo.webp) center/100% 100% no-repeat;
+  background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.85) 48%,rgba(160,240,255,.6) 52%,transparent 65%) no-repeat;
+  background-size:250% 100%;background-position:150% 0;mix-blend-mode:screen;animation:barridoLogo 4.5s ease-in-out infinite 1s}
+@keyframes neonAzul{0%,100%{filter:drop-shadow(0 0 1px #bff4ff) drop-shadow(0 0 6px rgba(0,229,255,.95)) drop-shadow(0 0 16px rgba(0,170,255,.7)) drop-shadow(0 0 34px rgba(0,120,255,.45))}
+  50%{filter:drop-shadow(0 0 2px #e0faff) drop-shadow(0 0 9px rgba(0,229,255,1)) drop-shadow(0 0 24px rgba(0,170,255,.85)) drop-shadow(0 0 52px rgba(0,120,255,.6))}}
+@keyframes flickAzul{0%,40%,42%,44%,100%{opacity:1}41%,43%{opacity:.6}}
+@keyframes barridoLogo{0%,55%{background-position:150% 0}100%{background-position:-60% 0}}
+@keyframes logoIn{from{opacity:0;transform:scale(.6);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}

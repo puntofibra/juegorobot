@@ -1,5 +1,5 @@
 /* =========================================================
-   LUCAS 5G · Futurmovil  —  juego de vuelo neón
+   LUCASBOT 5G · Futurmovil  —  juego de vuelo neón
    ========================================================= */
 'use strict';
 const CFG = {
@@ -1145,8 +1145,8 @@ function paintRanking() {
 /* ---- compartir / instalar ---- */
 function compartir(txt) {
   Audio5.init(); Audio5.click();
-  const text = txt || '¡Juega a LUCAS 5G de Futurmovil y vuela con Lucas!';
-  if (navigator.share) navigator.share({ title: 'LUCAS 5G', text, url: CFG.URL }).catch(() => {});
+  const text = txt || '¡Juega a LUCASBOT 5G de Futurmovil y vuela con Lucas!';
+  if (navigator.share) navigator.share({ title: 'LUCASBOT 5G', text, url: CFG.URL }).catch(() => {});
   else window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + CFG.URL), '_blank');
 }
 let deferredPrompt = null;
@@ -1187,7 +1187,7 @@ $('#btnRanking').onclick = openRanking;
 $('#btnFinRank').onclick = openRanking;
 $('#btnAyuda').onclick = () => { Audio5.init(); Audio5.click(); show('#sAyuda', true); };
 $('#btnCompartir').onclick = () => compartir();
-$('#btnFinComp').onclick = () => compartir(`¡He hecho ${lastResult ? lastResult.pts.toLocaleString('es-ES') : 0} puntos con Lucas en LUCAS 5G de Futurmovil! ¿Me superas?`);
+$('#btnFinComp').onclick = () => compartir(`¡He hecho ${lastResult ? lastResult.pts.toLocaleString('es-ES') : 0} puntos con Lucas en LUCASBOT 5G de Futurmovil! ¿Me superas?`);
 $('#btnInstalar').onclick = instalar;
 if (standalone) $('#btnInstalar').classList.add('oculto');
 $('#btnFinMenu').onclick = () => { Audio5.click(); goMenu(); };
