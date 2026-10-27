@@ -36,6 +36,7 @@ function manejar_(p) {
       case 'recuperar': return recuperar_(p);
       case 'restablecer': return restablecer_(p);
       case 'enviar': return enviar_(p);
+      case 'inicio': return inicio_(p);
       default: return { ok: true, juego: 'LUCASBOT 5G', semana: semana_(new Date()), google: !!GOOGLE_CLIENT_ID };
     }
   } catch (err) {
@@ -68,7 +69,11 @@ function hoja_(nombre, cab) {
   }
   return sh;
 }
-function hojaPuntos_() { return hoja_('Puntuaciones', CAB_P); }
+function hojaPuntos_() {
+  const sh = hoja_('Puntuaciones', CAB_P);
+  if (!sh.getRange('I1').getValue()) sh.getRange('I1:J1').setValues([['Partida', 'SegReales']]).setFontWeight('bold').setBackground('#0b1222').setFontColor('#19ff6a');
+  return sh;
+}
 function hojaUsuarios_() {
   const sh = hoja_('Usuarios', CAB_U);
   sh.getRange('C:C').setNumberFormat('@'); sh.getRange('K:N').setNumberFormat('@');
@@ -247,17 +252,25 @@ function enviar_(p) {
   if (!s) throw new Error('Inicia sesión para guardar tu puntuación');
   const puntos = parseInt(p.puntos, 10) || 0, metros = parseInt(p.metros, 10) || 0, datos = parseInt(p.datos, 10) || 0, dur = parseInt(p.dur, 10) || 0;
   const usuario = s.row[U.Usuario];
-  if (String(p.firma) !== firma_([usuario, puntos, metros, datos, dur].join('|'))) throw new Error('Puntuación no válida');
+  const partida = String(p.partida || '');
+  if (String(p.firma) !== firma_([usuario, puntos, metros, datos, dur, partida].join('|'))) throw new Error('Puntuación no válida');
   const seg = dur / 1000;
-  if (seg < 3 || metros > seg * 45 + 50 || puntos > metros * 2 + datos * 100 + 1000 || puntos < metros) throw new Error('Puntuación no válida');
+  // ticket de partida emitido por el servidor: un solo uso y con tiempo real medido aquí
+  const cache = CacheService.getScriptCache(), kpt = 'pt_' + s.row[U.Id];
+  const pt = JSON.parse(cache.get(kpt) || 'null');
+  if (!pt || !partida || pt.id !== partida) throw new Error('No se pudo validar la partida. Vuelve a jugar con conexión.');
+  cache.remove(kpt);
+  const real = (Date.now() - pt.t) / 1000;
+  if (seg > real + 5) { sospecha_(s.row, 'tiempo', puntos, seg, real); throw new Error('Puntuación no válida'); }
+  if (seg < 3 || metros > seg * 45 + 50 || puntos > metros * 2 + datos * 100 + 1000 || puntos < metros) { sospecha_(s.row, 'limites', puntos, seg, real); throw new Error('Puntuación no válida'); }
   freno_('env_' + s.row[U.Id], 1, 6);
   const sem = semana_(new Date());
   let nuevoRecord = false;
   const pr = premioItem_();
   let item = null;
   conLock_(() => {
-    hojaPuntos_().appendRow([new Date(), sem, usuario, puntos, metros, datos, Math.round(seg), s.row[U.Id]]);
-    if (pr.tipo && puntos >= pr.minimo) {
+    hojaPuntos_().appendRow([new Date(), sem, usuario, puntos, metros, datos, Math.round(seg), s.row[U.Id], partida, Math.round(real)]);
+    if (pr.tipo && puntos >= pr.minimo && seg >= 60 && itemsHoy_(s.row[U.Id]) < pr.maxDia) {
       item = { id: nuevoIdItem_(), tipo: pr.tipo };
       hojaItems_().appendRow([item.id, item.tipo, s.row[U.Id], usuario, new Date(), 'Premio ' + sem + ' (' + puntos + ' pts)', '', '', '']);
     }
@@ -327,7 +340,9 @@ function premioItem_() {
     if (!String(sh.getRange('B1').getValue())) sh.getRange('B1').setValue('Calabaza coleccionable por cada partida de más de 5.000 puntos');
   }
   const v = sh.getRange('B3:B4').getValues();
-  return { tipo: String(v[0][0] || '').trim().toLowerCase(), minimo: Number(v[1][0]) || 5000 };
+  if (!String(sh.getRange('A5').getValue())) { sh.getRange('A5:B5').setValues([['Máximo items por día', 20]]); sh.getRange('A5').setFontWeight('bold'); }
+  const m = Number(sh.getRange('B5').getValue()) || 20;
+  return { tipo: String(v[0][0] || '').trim().toLowerCase(), minimo: Number(v[1][0]) || 5000, maxDia: m };
 }
 function nuevoIdItem_() {
   const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -364,4 +379,25 @@ function guardarSala_(p) {
     });
     return { ok: true, cambios };
   });
+}
+
+/* ================= ANTITRAMPAS ================= */
+/* Al pulsar JUGAR el servidor emite un ticket de partida (un solo uso). Al enviar la puntuación
+   se comprueba que es la partida en curso y que el tiempo real transcurrido cuadra con el declarado. */
+function inicio_(p) {
+  const s = porToken_(p.token); if (!s) return { ok: false, sesion: false };
+  freno_('ini_' + s.row[U.Id], 20, 60);
+  const id = Utilities.getUuid().replace(/-/g, '').slice(0, 20);
+  CacheService.getScriptCache().put('pt_' + s.row[U.Id], JSON.stringify({ id, t: Date.now() }), 21600);
+  return { ok: true, partida: id };
+}
+function itemsHoy_(uid) {
+  const sh = hojaItems_(), n = sh.getLastRow() - 1; if (n <= 0) return 0;
+  const hoy = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'); let c = 0;
+  sh.getRange(2, 3, n, 3).getValues().forEach(r => { if (String(r[0]) === String(uid) && r[2] instanceof Date && Utilities.formatDate(r[2], TZ, 'yyyy-MM-dd') === hoy) c++; });
+  return c;
+}
+function sospecha_(row, motivo, puntos, seg, real) {
+  try { hoja_('Sospechosos', ['Fecha', 'Usuario', 'IdUsuario', 'Motivo', 'Puntos', 'SegDeclarados', 'SegReales'])
+    .appendRow([new Date(), row[U.Usuario], row[U.Id], motivo, puntos, Math.round(seg), Math.round(real || 0)]); } catch (e) {}
 }
