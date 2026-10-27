@@ -687,11 +687,11 @@ function drawMoon(t) {
   const tx = (state === 'menu' || state === 'load') ? (portrait ? W * .78 : W * .1 + mr) : W * .72;
   moonX = moonX == null ? tx : lerp(moonX, tx, .03);
   const cx = moonX, cy = Math.max(CEIL + mr + 50, GROUND - GROUND * .7);
-  const R = S * DPR, px = Math.ceil(size * R), c0 = px / 2, rr = mr * R;
+  const R = S * DPR, ip = Math.ceil(size * R), px = Math.ceil(ip * 1.45), c0 = px / 2, rr = mr * R;   // lienzo 1.45x para que al girar no se corten las esquinas
   if (!moonC || moonC.width !== px) { moonC = off(px, px); moonG = moonC.getContext('2d'); moonG.imageSmoothingQuality = 'high'; }
   const g = moonG;
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, px, px);
-  g.translate(c0, c0); g.rotate(t * 0.11); g.drawImage(im, -c0, -c0, px, px); g.setTransform(1, 0, 0, 1, 0, 0);
+  g.translate(c0, c0); g.rotate(t * 0.11); g.drawImage(im, -ip / 2, -ip / 2, ip, ip); g.setTransform(1, 0, 0, 1, 0, 0);
   // sombreado fijo (la luz no gira, la luna sí) => sensación de esfera
   g.globalCompositeOperation = 'source-atop';
   const sh = g.createRadialGradient(c0 - rr * .45, c0 - rr * .5, rr * .1, c0, c0, rr * 1.12);
@@ -704,7 +704,7 @@ function drawMoon(t) {
   ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .28;
   ctx.drawImage(glowSpr(z.a), cx - mr * 2.3 * pul, cy - mr * 2.3 * pul, mr * 4.6 * pul, mr * 4.6 * pul);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-  ctx.drawImage(moonC, cx - size / 2, cy - size / 2, size, size);
+  ctx.drawImage(moonC, cx - size * .725, cy - size * .725, size * 1.45, size * 1.45);
   // borde iluminado
   ctx.globalCompositeOperation = 'lighter';
   const rim = ctx.createLinearGradient(cx - mr, cy - mr, cx + mr, cy + mr); rim.addColorStop(0, rgba(z.a, 0)); rim.addColorStop(.6, rgba(z.a, .15)); rim.addColorStop(1, rgba(z.a, .6));
@@ -714,7 +714,6 @@ function drawMoon(t) {
 function drawLayerSet(Ls, a, t) {
   if (!Ls || a <= 0) return;
   ctx.globalAlpha = a;
-  tile(Ls.far, .05);
   drawArt(Ls.altos, .14, t, .55);
   // neblina entre capas para dar profundidad
   const hz2 = ctx.createLinearGradient(0, GROUND - GROUND * .3, 0, GROUND); hz2.addColorStop(0, 'rgba(5,8,18,0)'); hz2.addColorStop(1, rgba(ZONAS[Ls.z].a, .10));
