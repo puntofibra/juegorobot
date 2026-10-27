@@ -1298,6 +1298,7 @@ function drawHeroFire(dt, t, o) {
    CUENTAS: registro, acceso, Google y recuperación
    ========================================================= */
 let SES = load('ses', null), trasLogin = null, PARTIDA = null;
+let trasSesion = null;   // si está definido, se ejecuta tras iniciar sesión en vez de empezar partida
 function api(accion, datos) {
   return fetch(CFG.API, { method: 'POST', body: JSON.stringify(Object.assign({ accion }, datos || {})) })
     .then(r => r.json()).catch(() => ({ ok: false, error: 'Sin conexión. Inténtalo otra vez.' }));
@@ -1314,6 +1315,7 @@ function sesion(d) {
   SES = { token: d.token, perfil: d.perfil }; store('ses', SES);
   if (SES.perfil.record > best) { best = SES.perfil.record; store('best', best); }
   Audio5.zone(); toast('¡Hola, ' + d.perfil.usuario + '!'); pintaCuenta();
+  if (trasSesion) { const f = trasSesion; trasSesion = null; return f(); }
   goMenu(); setTimeout(startGame, 350);
 }
 function vistaLogin(v) {
@@ -1553,48 +1555,105 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
 
   function msg(t, cls) { const m = $('#admMsg'); m.textContent = t; m.className = cls || ''; }
   function anim(cls) { $('#nfcAnim').className = 'nfcAnim ' + (cls || ''); }
+  const hayNfc = 'NDEFReader' in window;
+  let modoQr = '', qrPoll = 0, qrFin = 0, leyendo = false;
+  function vistaLlave(titulo, texto, cls) {
+    $('#admPanel').classList.add('oculto'); $('#admLlave').classList.remove('oculto');
+    $('#admLlave h2').textContent = titulo; msg(texto, cls); anim('');
+    $('#admLlave .admCerrar').textContent = 'Cancelar';
+    $('#admQr').classList.add('oculto'); $('#btnNfc').classList.remove('oculto'); $('#btnAdmLogin').classList.add('oculto');
+  }
   function abrirAdmin() {
     Audio5.init(); Audio5.record(); vib([30, 40, 30]);
     show('#sAdmin');
     if (ADM) return verPanel();
-    $('#admPanel').classList.add('oculto'); $('#admLlave').classList.remove('oculto'); anim('');
-    if (!SES) msg('Primero inicia sesión con la cuenta de administrador.', 'err');
-    else if (!('NDEFReader' in window)) msg('Este navegador no puede leer NFC. Usa Chrome en un móvil Android con NFC activado.', 'err');
-    else msg('Pulsa «Escanear» y acerca tu llave NFC a la parte trasera del móvil');
+    if (!hayNfc && !modoQr) return mostrarQr();          // ordenador: se autoriza con el móvil
+    vistaLlave(modoQr ? 'Autorizar ordenador' : 'Acceso administrador', modoQr ? 'Pasa tu llave para dar acceso al ordenador' : 'Acerca tu llave NFC a la parte trasera del móvil');
+    if (!SES) { msg('Primero inicia sesión con la cuenta de administrador.', 'err'); $('#btnNfc').classList.add('oculto'); $('#btnAdmLogin').classList.remove('oculto'); return; }
+    if (!hayNfc) { msg('Este navegador no puede leer NFC. Usa Chrome en un móvil Android con NFC activado.', 'err'); return; }
+    escanear(true);
   }
-  function cerrarAdmin() { if (nfcCtrl) { nfcCtrl.abort(); nfcCtrl = null; } Audio5.click(); goMenu(); }
+  function pararNfc() { if (nfcCtrl) { nfcCtrl.abort(); nfcCtrl = null; } leyendo = false; }
+  function cerrarAdmin() {
+    pararNfc(); clearInterval(qrPoll); qrPoll = 0; Audio5.click();
+    if (modoQr) { modoQr = ''; document.body.classList.remove('admQr'); }
+    goMenu();
+  }
   $$('.admCerrar').forEach(b => b.onclick = cerrarAdmin);
+  $('#btnAdmLogin').onclick = () => { trasSesion = () => { show(null); abrirAdmin(); }; abrirLogin('entrar'); };
 
-  $('#btnNfc').onclick = async () => {
-    if (!SES) return msg('Primero inicia sesión con la cuenta de administrador.', 'err');
-    if (!('NDEFReader' in window)) return msg('Este navegador no puede leer NFC. Usa Chrome en un móvil Android con NFC activado.', 'err');
+  /* El lector NFC se mantiene encendido mientras esta pantalla está abierta:
+     así el móvil no abre la web que la llave lleva grabada (Chrome tiene el lector en exclusiva). */
+  async function escanear(auto) {
+    if (!SES || !hayNfc) return;
     try {
-      if (nfcCtrl) nfcCtrl.abort();
-      nfcCtrl = new AbortController();
-      const r = new NDEFReader();
-      await r.scan({ signal: nfcCtrl.signal });
-      anim('busca'); msg('Esperando llave… acércala al móvil');
-      r.onreadingerror = () => { anim('err'); msg('No pude leer esa llave. Vuelve a intentarlo (puede que no sea compatible).', 'err'); };
-      r.onreading = e => {
-        const llave = e.serialNumber || '';
-        if (nfcCtrl) { nfcCtrl.abort(); nfcCtrl = null; }
-        if (!llave) { anim('err'); return msg('La llave no tiene número de serie legible.', 'err'); }
-        anim('busca'); msg('Comprobando llave…');
-        api('admin_entrar', { token: SES.token, llave }).then(d => {
-          if (!d.ok) { anim('err'); vib([80, 60, 80]); Audio5.hit && Audio5.hit(); return msg(d.error || 'Llave no autorizada', 'err'); }
-          ADM = d.admin; anim('ok'); vib([30, 30, 120]); Audio5.record();
-          msg(d.nueva ? '¡Llave registrada como llave de administrador!' : '¡Acceso concedido!', 'ok');
-          setTimeout(verPanel, 700);
-        });
-      };
+      if (!nfcCtrl) {
+        nfcCtrl = new AbortController();
+        const r = new NDEFReader();
+        await r.scan({ signal: nfcCtrl.signal });
+        r.onreadingerror = () => { if (leyendo) return; anim('err'); msg('No pude leer esa llave. Vuelve a intentarlo (puede que no sea compatible).', 'err'); };
+        r.onreading = e => leida(e.serialNumber || '');
+      }
+      anim('busca'); msg(modoQr ? 'Esperando llave… acércala para autorizar el ordenador' : 'Esperando llave… acércala al móvil');
     } catch (err) {
-      anim('err'); msg(err && err.name === 'NotAllowedError' ? 'Necesito permiso para usar NFC. Acéptalo y vuelve a pulsar.' : 'No se pudo activar el NFC. Comprueba que está encendido en el móvil.', 'err');
+      pararNfc(); anim('');
+      if (auto) msg('Pulsa «Escanear llave» y acerca tu llave NFC a la parte trasera del móvil');
+      else { anim('err'); msg(err && err.name === 'NotAllowedError' ? 'Necesito permiso para usar NFC. Acéptalo y vuelve a pulsar.' : 'No se pudo activar el NFC. Comprueba que está encendido en el móvil.', 'err'); }
     }
-  };
+  }
+  $('#btnNfc').onclick = () => { if (!SES) return; escanear(false); };
+  function leida(llave) {
+    if (leyendo || ADM && !modoQr) return;       // ignora lecturas repetidas (el lector sigue activo)
+    if (!llave) { anim('err'); return msg('La llave no tiene número de serie legible.', 'err'); }
+    leyendo = true; anim('busca'); msg('Comprobando llave…');
+    api('admin_entrar', { token: SES.token, llave, qr: modoQr || undefined }).then(d => {
+      if (!d.ok) { leyendo = false; anim('err'); vib([80, 60, 80]); return msg(d.error || 'Llave no autorizada', 'err'); }
+      anim('ok'); vib([30, 30, 120]); Audio5.record();
+      if (modoQr) { $('#btnNfc').classList.add('oculto'); msg('✓ Ordenador autorizado. Ya puedes seguir en el PC.', 'ok'); $('#admLlave .admCerrar').textContent = 'Cerrar'; return; }
+      ADM = d.admin;
+      msg(d.nueva ? '¡Llave registrada como llave de administrador!' : '¡Acceso concedido!', 'ok');
+      setTimeout(verPanel, 700);
+    });
+  }
+
+  /* ---- ordenador sin NFC: QR para autorizar con el móvil ---- */
+  function cargaQrLib() {
+    if (window.qrcode) return Promise.resolve();
+    return new Promise((ok, ko) => { const s = document.createElement('script'); s.src = 'js/qrcode.min.js?v=1'; s.onload = ok; s.onerror = ko; document.head.appendChild(s); });
+  }
+  function mostrarQr() {
+    vistaLlave('Acceso administrador', 'Generando código…');
+    $('#btnNfc').classList.add('oculto'); $('#admQr').classList.remove('oculto'); $('#admQrImg').innerHTML = '';
+    clearInterval(qrPoll);
+    Promise.all([api('qr_nuevo'), cargaQrLib()]).then(([d]) => {
+      if (!d.ok) return msg(d.error || 'No se pudo generar el código', 'err');
+      const url = CFG.URL.replace(/\/?$/, '/') + '?admqr=' + d.code;
+      const q = qrcode(0, 'M'); q.addData(url); q.make(); $('#admQrImg').innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+      msg('Escanea este código con tu móvil y pasa la llave NFC en el móvil'); anim('busca');
+      qrFin = Date.now() + d.seg * 1000;
+      qrPoll = setInterval(() => {
+        const queda = Math.max(0, Math.round((qrFin - Date.now()) / 1000));
+        $('#admQrT').textContent = queda ? `Caduca en ${Math.floor(queda / 60)}:${String(queda % 60).padStart(2, '0')}` : '';
+        if (!queda) { clearInterval(qrPoll); anim(''); msg('El código ha caducado.', 'err'); $('#admQrImg').innerHTML = '<button class="btn sec" id="btnQrNuevo">Generar otro código</button>'; $('#btnQrNuevo').onclick = mostrarQr; return; }
+        if (queda % 2) return;
+        api('qr_estado', { code: d.code }).then(r => {
+          if (!r.ok || !r.admin || !qrPoll) return;
+          clearInterval(qrPoll); qrPoll = 0; ADM = r.admin; anim('ok'); Audio5.record(); msg('¡Acceso concedido desde el móvil!', 'ok'); setTimeout(verPanel, 700);
+        });
+      }, 1000);
+    }).catch(() => msg('No se pudo generar el código QR. Revisa la conexión.', 'err'));
+  }
+  // el móvil abre el juego desde el QR del ordenador
+  const qrParam = new URLSearchParams(location.search).get('admqr');
+  if (qrParam && /^[A-Za-z0-9]{20,64}$/.test(qrParam)) {
+    modoQr = qrParam; document.body.classList.add('admQr');
+    history.replaceState(null, '', location.pathname);
+    const espera = setInterval(() => { if (state === 'menu') { clearInterval(espera); abrirAdmin(); } }, 300);
+  }
 
   function adm(op, datos) {
     return api('admin', Object.assign({ admin: ADM, op }, datos || {})).then(d => {
-      if (d.caducada) { ADM = null; toast('La sesión de administrador ha caducado'); abrirAdmin(); }
+      if (d.caducada) { ADM = null; leyendo = false; toast('La sesión de administrador ha caducado'); abrirAdmin(); }
       return d;
     });
   }
