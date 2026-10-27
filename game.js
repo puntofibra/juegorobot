@@ -111,6 +111,7 @@ const Audio5 = (() => {
     shieldBreak() { noise(0.35, 0.3, 6000, 300, 'bandpass'); tone(900, 0.3, 'triangle', 0.15, 0.3); },
     smash() { noise(0.25, 0.35, 2500, 200); tone(220, 0.2, 'square', 0.12, 0.4); },
     boom() { noise(0.9, 0.7, 1800, 60); tone(110, 0.8, 'sine', 0.7, 0.25); tone(55, 1, 'sawtooth', 0.2, 0.5); },
+    skid(v) { noise(0.12, 0.10 * v + .02, 1800, 700, 'bandpass'); },
     near() { noise(0.25, 0.18, 400, 4000, 'bandpass'); tone(1200, 0.15, 'sine', 0.08, 1.6); },
     click() { tone(1400, 0.05, 'square', 0.06); },
     beep(hi) { tone(hi ? 1320 : 660, hi ? 0.4 : 0.15, 'square', 0.1); },
@@ -127,7 +128,7 @@ const Audio5 = (() => {
 const cv = $('#cv'), ctx = cv.getContext('2d');
 let DPR = 1, VW = 0, VH = 0, S = 1, W = 1280, H = 720, GROUND = 650, CEIL = 46, PX = 300;
 const IMG = {};
-const IMG_LIST = ['luna', 'altos', 'altos-luz', 'bajos', 'bajos-luz', 'capa', 'superlucas', 'vuela', 'saluda', 'celebra', 'duda', 'senala', 'mando', 'switch', 'telefono', 'portatil', 'halloween', 'navidad', 'piscina'];
+const IMG_LIST = ['caido', 'luna', 'altos', 'altos-luz', 'bajos', 'bajos-luz', 'capa', 'superlucas', 'vuela', 'saluda', 'celebra', 'duda', 'senala', 'mando', 'switch', 'telefono', 'portatil', 'halloween', 'navidad', 'piscina'];
 
 function loadImages(cb) {
   let n = 0;
@@ -138,7 +139,7 @@ function loadImages(cb) {
   });
 }
 
-function off(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; }
+function off(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; return c; }
 const glowCache = {};
 function glowSpr(col) {
   if (glowCache[col]) return glowCache[col];
@@ -279,6 +280,7 @@ function resize() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   VW = window.innerWidth; VH = window.innerHeight;
   cv.width = Math.round(VW * DPR); cv.height = Math.round(VH * DPR);
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   S = Math.min(VH / 720, VW / 520); W = VW / S; H = VH / S;
   GROUND = H - Math.min(80, H * 0.1); CEIL = 46; PX = clamp(W * (W < 700 ? 0.27 : 0.24), 125, 340);
   layers = buildLayers(zona); prevLayers = null; layerFade = 1; makeStars();
@@ -286,6 +288,7 @@ function resize() {
 
 const top_ = () => CEIL + 52, bot_ = () => GROUND - 50;
 /* Lucas volando (superlucas): tamaño en pantalla y zonas de choque */
+const DH = 118, DW = DH * 640 / 456;                            // Lucas caído
 const LH = 100, LW = LH * 720 / 361, AX = 0.62, AY = 0.60;     // ancla = centro del cuerpo
 const HITC = [[20, -20, 27], [-10, 14, 26], [64, 0, 11]];
 const NOZZ = [[.295, .76, 1], [.33, .855, .9]];                   // toberas (x, y relativos a la imagen, escala)
@@ -378,7 +381,7 @@ function resetGame() {
   timeScale = 1; hitStop = 0; shake = 0; holding = false;
   coinsArr = []; lasers = []; viruses = []; missiles = []; powers = []; parts = []; texts = []; warns = [];
   Object.assign(pw, { escudo: false, iman: 0, turbo: 0, x2: 0, invul: 0 });
-  Object.assign(L, { y: (top_() + bot_()) / 2, vy: 0, rot: 0, sx: 1, sy: 1, vis: true, inX: -200, trail: [], dead: false, spin: 0 });
+  Object.assign(L, { y: (top_() + bot_()) / 2, vy: 0, rot: 0, sx: 1, sy: 1, vis: true, inX: -200, trail: [], dead: false, spin: 0, skid: [], dx: 0, dvx: 0 });
   spawnX = W + 500; nextPower = 2400; missileT = 9; lastZone = 0;
   if (zona !== 0) setZone(0, true);
   updHud(true);
@@ -421,7 +424,7 @@ function die() {
   const px = camX + PX;
   burst(px, L.y, '#ff2b4e', 46, 700); burst(px, L.y, '#19ff6a', 30, 420);
   for (let i = 0; i < 18; i++) P(px, L.y, rnd(-300, 300), rnd(-500, -100), rnd(.8, 1.6), rnd(3, 7), '#9aa7b8', 'debris', { grav: 1400, vr: rnd(-12, 12), drag: .5 });
-  L.vy = -650; $('#btnPausa').classList.add('oculto'); pw.iman = pw.x2 = pw.turbo = 0; pw.escudo = false; updPwHud(); combo = 0; updCombo();
+  L.vy = -420; L.dx = 0; L.dvx = 260; L.landed = false; L.swapT = 0; L.rot = 0; L.sx = L.sy = 1; $('#btnPausa').classList.add('oculto'); pw.iman = pw.x2 = pw.turbo = 0; pw.escudo = false; updPwHud(); combo = 0; updCombo();
 }
 let dieT = 0;
 
@@ -547,7 +550,7 @@ function update(dt) {
   // texto flotante (tiempo real)
   for (let i = texts.length - 1; i >= 0; i--) { const tx = texts[i]; tx.life -= rdt * .9; tx.y -= 50 * rdt; if (tx.life <= 0) texts.splice(i, 1); }
 
-  if (state === 'dying') { dieT += rdt; timeScale = dieT < 1 ? lerp(.25, 1, dieT) : 1; if (dieT > 1.8) gameOver(); }
+  if (state === 'dying') { dieT += rdt; timeScale = dieT < .5 ? lerp(.35, 1, dieT * 2) : 1; if (dieT > 2.4) gameOver(); }
   updHud();
 }
 
@@ -566,10 +569,29 @@ function updLucas(dt, rdt) {
   const top = top_(), bot = bot_();
   if (L.inX < 0) L.inX = Math.min(0, L.inX + rdt * 420);
   if (L.dead) {
-    L.vy += 2400 * dt; L.y += L.vy * dt; L.spin += dt * 9; L.rot = L.spin;
-    if (L.y > GROUND - 30) { L.y = GROUND - 30; L.vy *= -.35; if (Math.abs(L.vy) > 120) { burst(camX + PX, L.y + 20, '#ff8a2b', 14, 260); shake = 10; } }
-    if (Math.random() < .6) P(camX + PX + rnd(-15, 15), L.y + rnd(-15, 15), rnd(-40, 40), rnd(-120, -40), rnd(.6, 1.2), rnd(8, 16), '', 'smoke', { drag: 1 });
-    if (Math.random() < .3) P(camX + PX, L.y, rnd(-200, 200), rnd(-300, 0), .4, 2, '#ffd23f', 'spark', { grav: 800 });
+    L.swapT += rdt;
+    const gy = GROUND - DH * .44, wx = camX + PX + L.dx;
+    L.vy += 2000 * dt; L.y += L.vy * dt; L.dx += L.dvx * dt;
+    if (!L.landed) {
+      L.rot = lerp(L.rot, .18, Math.min(1, dt * 6));
+      if (L.y >= gy) {                       // impacto con el suelo
+        L.y = gy; L.landed = true; L.vy = 0; L.dvx = Math.max(L.dvx, 420); L.sy = .72; L.sx = 1.22;
+        shake = 14; hitStop = .05; vib(50); Audio5.smash();
+        for (let i = 0; i < 16; i++) P(wx + rnd(-50, 50), GROUND - 6, rnd(-260, 260), rnd(-260, -60), rnd(.6, 1.1), rnd(10, 20), '', 'smoke', { drag: 2 });
+        for (let i = 0; i < 10; i++) P(wx + rnd(-30, 30), GROUND - 4, rnd(-150, 350), rnd(-420, -150), rnd(.5, .9), rnd(3, 6), '#7d8698', 'debris', { grav: 1600, vr: rnd(-14, 14) });
+      }
+    } else {
+      L.y = gy; L.rot = lerp(L.rot, -.04 + Math.sin(L.swapT * 22) * .015 * Math.min(1, L.dvx / 300), Math.min(1, dt * 8));
+      const prev = L.dvx; L.dvx = Math.max(0, L.dvx - 520 * dt);
+      if (L.dvx > 25) {                      // derrape: polvo, chispas y marca en el suelo
+        if (Math.random() < .9) P(wx - DW * .28 + rnd(-10, 10), GROUND - 8, rnd(-200, -60) * L.dvx / 420, rnd(-120, -30), rnd(.5, 1), rnd(8, 16) * (.5 + L.dvx / 420), '', 'smoke', { drag: 1.8 });
+        if (Math.random() < .8) P(wx + DW * .3 + rnd(-6, 6), GROUND - 4, rnd(-380, -120), rnd(-220, -40), rnd(.25, .45), rnd(1.5, 2.5), pick(['#ffd23f', '#ff8a2b', '#ffffff']), 'spark', { grav: 900, drag: 1 });
+        L.skid.push([wx + DW * .3, L.dvx / 420]); if (L.skid.length > 120) L.skid.shift();
+        if (Math.floor(L.swapT * 9) !== L.sb) { L.sb = Math.floor(L.swapT * 9); Audio5.skid && Audio5.skid(L.dvx / 420); }
+      } else if (prev > 25) { L.sx = 1.08; L.sy = .9; }   // frenazo final
+    }
+    L.sx = lerp(L.sx, 1, Math.min(1, dt * 7)); L.sy = lerp(L.sy, 1, Math.min(1, dt * 7));
+    if (Math.random() < .25) P(wx + rnd(-20, 30), L.y - DH * .3, rnd(-20, 20), rnd(-80, -30), rnd(.8, 1.4), rnd(6, 12), '', 'smoke', { drag: 1 });
     return;
   }
   const thr = (state === 'play' && holding) || (state === 'count' && L.y > (top + bot) / 2 + 10);
@@ -666,7 +688,7 @@ function drawMoon(t) {
   moonX = moonX == null ? tx : lerp(moonX, tx, .03);
   const cx = moonX, cy = Math.max(CEIL + mr + 50, GROUND - GROUND * .7);
   const R = S * DPR, px = Math.ceil(size * R), c0 = px / 2, rr = mr * R;
-  if (!moonC || moonC.width !== px) { moonC = off(px, px); moonG = moonC.getContext('2d'); }
+  if (!moonC || moonC.width !== px) { moonC = off(px, px); moonG = moonC.getContext('2d'); moonG.imageSmoothingQuality = 'high'; }
   const g = moonG;
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, px, px);
   g.translate(c0, c0); g.rotate(t * 0.11); g.drawImage(im, -c0, -c0, px, px); g.setTransform(1, 0, 0, 1, 0, 0);
@@ -856,7 +878,47 @@ function drawJetFlames(t) {
   });
   ctx.globalCompositeOperation = 'source-over';
 }
+
+function drawCaido(t) {
+  const x = PX + L.dx, y = L.y, k = clamp(L.swapT / .22, 0, 1);
+  // marca de derrape en el suelo
+  if (L.skid.length > 1) {
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 1; i < L.skid.length; i++) {
+      const a = L.skid[i - 1], b = L.skid[i];
+      ctx.strokeStyle = `rgba(255,170,60,${.35 * b[1]})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(a[0] - camX, GROUND - 2); ctx.lineTo(b[0] - camX, GROUND - 2); ctx.stroke();
+      ctx.strokeStyle = `rgba(0,0,0,${.45 * b[1]})`; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(a[0] - camX, GROUND + 3); ctx.lineTo(b[0] - camX, GROUND + 3); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // sombra
+  const sd = clamp(1 - (GROUND - DH * .44 - y) / 300, .2, 1);
+  ctx.fillStyle = `rgba(0,0,0,${.45 * sd})`; ctx.beginPath(); ctx.ellipse(x, GROUND - 2, DW * .42 * sd, 9 * sd, 0, 0, TAU); ctx.fill();
+  // transición: el volador desaparece en un destello y aparece el caído con un "pop"
+  if (k < 1) {
+    const im = IMG.superlucas; ctx.save(); ctx.globalAlpha = 1 - k; ctx.translate(x, y); ctx.scale(1 + k * .3, 1 - k * .2);
+    ctx.drawImage(im, -AX * LW, -AY * LH, LW, LH); ctx.restore();
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (1 - k) * .9;
+    ctx.drawImage(glowSpr('#ffffff'), x - 110, y - 110, 220, 220); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
+  const pop = k < 1 ? 1.35 - .35 * (1 - Math.pow(1 - k, 3)) : 1;
+  ctx.save(); ctx.globalAlpha = k; ctx.translate(x, GROUND); ctx.rotate(L.rot); ctx.scale(L.sx * pop, L.sy * pop);
+  ctx.drawImage(IMG.caido, -DW / 2, -(GROUND - y) - DH * .5, DW, DH);
+  ctx.restore();
+  // estrellitas de mareo girando
+  if (L.landed) {
+    for (let i = 0; i < 3; i++) {
+      const a = t * 3 + i * TAU / 3, sx = x + DW * .15 + Math.cos(a) * 34, sy = y - DH * .52 + Math.sin(a) * 9;
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .7; ctx.drawImage(glowSpr('#ffd23f'), sx - 9, sy - 9, 18, 18);
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+      ctx.fillStyle = '#ffe680'; ctx.font = '900 13px Orbitron, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('★', sx, sy);
+    }
+  }
+}
 function drawLucas(t) {
+  if (L.dead && L.vis && IMG.caido.complete) { drawCaido(t); return; }
   if (!L.vis || !IMG.superlucas.complete) return;
   const im = IMG.superlucas, h = LH, w = LW, ax = -AX * w, ay = -AY * h;
   const x = PX + L.inX, y = L.y;
