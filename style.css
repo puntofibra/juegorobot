@@ -99,7 +99,10 @@ h2{font-family:Orbitron;font-weight:900;letter-spacing:.1em;font-size:24px;margi
 /* Menú */
 .menu{display:flex;align-items:center;justify-content:center;gap:clamp(10px,4vw,60px);width:100%;max-width:1100px}
 .hero{position:relative;flex:0 0 auto;display:grid;place-items:center}
-.lucasImg.grande{height:min(52vh,420px);position:relative;z-index:2}
+.lucasImg.grande{height:min(46vh,380px);position:relative;z-index:2}
+.heroLucas{position:relative;z-index:2;padding-bottom:min(16vh,130px)}
+#heroFx{position:absolute;left:-20%;top:0;width:140%;height:100%;z-index:1;pointer-events:none}
+.heroLucas .lucasImg{filter:drop-shadow(0 0 16px rgba(25,255,106,.35)) drop-shadow(0 10px 20px rgba(0,0,0,.6))}
 .halo{position:absolute;width:80%;aspect-ratio:1;border-radius:50%;z-index:1;
   background:radial-gradient(circle,rgba(25,255,106,.35),rgba(0,229,255,.12) 45%,transparent 70%);animation:halo 3.2s ease-in-out infinite}
 @keyframes halo{50%{transform:scale(1.12);opacity:.7}}
@@ -108,7 +111,8 @@ h2{font-family:Orbitron;font-weight:900;letter-spacing:.1em;font-size:24px;margi
   transition:opacity .3s,transform .3s}
 .bocadillo::after{content:"";position:absolute;left:18px;bottom:-8px;border:8px solid transparent;border-top-color:#fff;border-bottom:0}
 .bocadillo.out{opacity:0;transform:translateY(6px) scale(.9)}
-.panel{display:flex;flex-direction:column;gap:12px;width:min(400px,100%);text-align:center}
+.panel{display:flex;flex-direction:column;gap:12px;width:min(430px,100%);text-align:center;padding:18px 16px;border-radius:22px;
+  background:radial-gradient(ellipse at 50% 30%,rgba(5,10,22,.82),rgba(5,8,18,.55) 75%,rgba(5,8,18,.0));backdrop-filter:blur(2px)}
 .logo{position:relative;font-family:Orbitron;font-weight:900;font-size:clamp(32px,5.6vw,64px);letter-spacing:.06em;line-height:1;color:#effff4;
   text-shadow:0 0 4px #fff,0 0 12px var(--v),0 0 30px var(--v),0 0 60px rgba(25,255,106,.6);animation:flick 7s infinite}
 @keyframes flick{0%,18%,22%,25%,53%,57%,100%{opacity:1}20%,24%,55%{opacity:.45;text-shadow:none}}
@@ -198,7 +202,8 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
 /* Vertical (móvil) */
 @media (orientation:portrait){
   .menu{flex-direction:column;gap:4px}
-  .lucasImg.grande{height:min(30vh,260px)}
+  .lucasImg.grande{height:min(26vh,230px)}
+  .heroLucas{padding-bottom:min(9vh,80px)}
   .bocadillo{right:-30%;top:0;font-size:15px;max-width:170px}
   .card.ancha{flex-direction:column;text-align:center}
   .lucasImg.lado{height:130px}
@@ -207,7 +212,8 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
   .screen{align-items:flex-start}
 }
 @media (max-height:520px) and (orientation:landscape){
-  .lucasImg.grande{height:70vh}
+  .lucasImg.grande{height:56vh}
+  .heroLucas{padding-bottom:18vh}
   .panel{gap:7px}
   .titulo b{font-size:30px}.logo{font-size:30px}
   .btn.jugar{padding:10px;font-size:20px}

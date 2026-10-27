@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -57,7 +57,10 @@
     <div class="hero">
       <div class="bocadillo" id="bocadillo">¡Hola! Soy Lucas</div>
       <div class="halo"></div>
-      <img src="img/saluda.webp" alt="Lucas saludando" class="lucasImg flota grande">
+      <div class="heroLucas flota">
+        <canvas id="heroFx"></canvas>
+        <img id="heroImg" src="img/capa.webp" alt="Lucas con capa" class="lucasImg grande">
+      </div>
     </div>
     <div class="panel">
       <div class="logo" data-t="FUTURMOVIL">FUTURMOVIL</div>
@@ -158,6 +161,6 @@
 </section>
 
 <div id="toast"></div>
-<script src="game.js?v=2"></script>
+<script src="game.js?v=3"></script>
 </body>
 </html>

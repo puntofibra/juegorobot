@@ -127,7 +127,7 @@ const Audio5 = (() => {
 const cv = $('#cv'), ctx = cv.getContext('2d');
 let DPR = 1, VW = 0, VH = 0, S = 1, W = 1280, H = 720, GROUND = 650, CEIL = 46, PX = 300;
 const IMG = {};
-const IMG_LIST = ['superlucas', 'vuela', 'saluda', 'celebra', 'duda', 'senala', 'mando', 'switch', 'telefono', 'portatil', 'halloween', 'navidad', 'piscina'];
+const IMG_LIST = ['capa', 'superlucas', 'vuela', 'saluda', 'celebra', 'duda', 'senala', 'mando', 'switch', 'telefono', 'portatil', 'halloween', 'navidad', 'piscina'];
 
 function loadImages(cb) {
   let n = 0;
@@ -1065,6 +1065,59 @@ $('#btnSonido').onclick = () => { Audio5.init(); Audio5.toggleSnd(); paintSnd();
 $('#btnMusica').onclick = () => { Audio5.init(); if (!Audio5.snd) Audio5.toggleSnd(); Audio5.toggleMus(); paintSnd(); };
 document.addEventListener('pointerdown', () => Audio5.init(), { once: true });
 
+
+/* =========================================================
+   FUEGO ANIMADO DE LUCAS EN EL MENÚ
+   ========================================================= */
+const heroFx = $('#heroFx'), hctx = heroFx.getContext('2d'), heroImg = $('#heroImg');
+const NOZ = [[.368, .945, 1], [.457, .96, 1.15], [.55, .945, 1]];   // centro x, y de cada tobera (relativo a la imagen)
+let hParts = [];
+function flamePath(x, y, w, L, wob) {
+  hctx.beginPath(); hctx.moveTo(x - w / 2, y);
+  hctx.bezierCurveTo(x - w / 2, y + L * .35, x - w * .2 + wob * .5, y + L * .7, x + wob, y + L);
+  hctx.bezierCurveTo(x + w * .2 + wob * .5, y + L * .7, x + w / 2, y + L * .35, x + w / 2, y);
+  hctx.closePath();
+}
+function flame(x, y, w, L, wob, stops) {
+  const g = hctx.createLinearGradient(x, y, x, y + L);
+  stops.forEach(([o, c]) => g.addColorStop(o, c));
+  hctx.fillStyle = g; flamePath(x, y, w, L, wob); hctx.fill();
+}
+function drawHeroFire(dt, t) {
+  const cr = heroFx.getBoundingClientRect(); if (!cr.width || !heroImg.complete) return;
+  const d = Math.min(window.devicePixelRatio || 1, 2), cw = Math.round(cr.width * d), ch = Math.round(cr.height * d);
+  if (heroFx.width !== cw || heroFx.height !== ch) { heroFx.width = cw; heroFx.height = ch; }
+  const ir = heroImg.getBoundingClientRect(), sc = ir.height / 555;
+  hctx.setTransform(d, 0, 0, d, 0, 0); hctx.clearRect(0, 0, cr.width, cr.height);
+  hctx.globalCompositeOperation = 'lighter';
+  // resplandor general bajo los propulsores
+  const bx = ir.left - cr.left + .457 * ir.width, by = ir.top - cr.top + .99 * ir.height;
+  const pul = 1 + Math.sin(t * 9) * .08 + Math.random() * .05;
+  hctx.globalAlpha = .55; hctx.drawImage(glowSpr('#19ff6a'), bx - 130 * sc * pul, by - 40 * sc, 260 * sc * pul, 230 * sc * pul); hctx.globalAlpha = 1;
+  NOZ.forEach(([rx, ry, k], i) => {
+    const x = ir.left - cr.left + rx * ir.width, y = ir.top - cr.top + ry * ir.height;
+    const w = 50 * sc;
+    const L = (150 + Math.sin(t * 23 + i * 2.1) * 14 + Math.sin(t * 41 + i) * 9 + Math.random() * 12) * sc * k;
+    const wob = (Math.sin(t * 13 + i * 1.7) + Math.sin(t * 29 + i) * .5) * w * .18;
+    flame(x, y, w * 1.7, L * 1.3, wob * 1.4, [[0, 'rgba(120,255,180,.45)'], [.4, 'rgba(25,255,106,.28)'], [1, 'rgba(0,229,255,0)']]);
+    flame(x, y, w * 1.05, L, wob, [[0, 'rgba(255,255,255,.95)'], [.18, 'rgba(200,255,225,.9)'], [.5, 'rgba(25,255,106,.75)'], [1, 'rgba(0,200,120,0)']]);
+    flame(x, y, w * .5, L * .5, wob * .4, [[0, 'rgba(255,255,255,1)'], [.6, 'rgba(230,255,240,.8)'], [1, 'rgba(255,255,255,0)']]);
+    // chispas y lenguas sueltas
+    const n = Math.random() < .7 ? 2 : 1;
+    for (let j = 0; j < n; j++) hParts.push({ x: x + rnd(-w * .3, w * .3), y: y + L * rnd(.3, .6), vx: rnd(-25, 25) * sc, vy: rnd(220, 420) * sc, life: rnd(.25, .55), max: .55, s: rnd(5, 11) * sc, col: pick(['#19ff6a', '#19ff6a', '#7dffb0', '#00e5ff']) });
+    if (Math.random() < .25) hParts.push({ x, y: y + L * .4, vx: rnd(-90, 90) * sc, vy: rnd(300, 520) * sc, life: .45, max: .45, s: 1.6 * sc, col: '#e8fff1', spark: 1 });
+  });
+  for (let i = hParts.length - 1; i >= 0; i--) {
+    const p = hParts[i]; p.life -= dt; if (p.life <= 0) { hParts.splice(i, 1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .98;
+    const a = clamp(p.life / p.max, 0, 1); hctx.globalAlpha = a;
+    if (p.spark) { hctx.strokeStyle = p.col; hctx.lineWidth = p.s; hctx.beginPath(); hctx.moveTo(p.x, p.y); hctx.lineTo(p.x - p.vx * .03, p.y - p.vy * .03); hctx.stroke(); }
+    else { const r = p.s * (.5 + a * .7); hctx.drawImage(glowSpr(p.col), p.x - r, p.y - r, r * 2, r * 2); }
+  }
+  if (hParts.length > 260) hParts.splice(0, hParts.length - 260);
+  hctx.globalAlpha = 1; hctx.globalCompositeOperation = 'source-over';
+}
+
 /* =========================================================
    ARRANQUE
    ========================================================= */
@@ -1072,6 +1125,7 @@ let last = performance.now();
 function loop(now) {
   const dt = Math.min(.034, (now - last) / 1000); last = now;
   update(dt); render();
+  if (state === 'menu' || state === 'load') drawHeroFire(dt, now / 1000);
   requestAnimationFrame(loop);
 }
 resize(); paintSnd(); temporada();
