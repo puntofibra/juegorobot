@@ -316,3 +316,14 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
 .card.ancha>.fxBox{flex:0 0 auto}
 @media (max-height:520px) and (orientation:landscape){.fxBox .lucasImg.lado{height:44vh}.fxBox{padding-bottom:16vh}}
 .legal{font-size:12px;color:#8ab;margin-top:8px}.legal a{color:var(--c)}
+
+/* Contador en vivo de jugadores de hoy */
+.enVivo{display:flex;align-items:center;justify-content:center;gap:8px;margin:-4px auto 2px;padding:5px 12px 5px 8px;border-radius:999px;width:max-content;max-width:100%;
+  background:linear-gradient(90deg,rgba(255,43,78,.12),rgba(0,229,255,.06));border:1px solid rgba(255,90,110,.35);box-shadow:0 0 14px rgba(255,43,78,.15) inset;font-size:14px;color:#cfe;animation:entra .5s both}
+.enVivo .punto{width:9px;height:9px;border-radius:50%;background:#ff2b4e;box-shadow:0 0 0 0 rgba(255,43,78,.7);animation:latidoVivo 1.6s infinite}
+.enVivo .etq{font-family:Orbitron;font-weight:900;font-size:11px;letter-spacing:.18em;color:#ff6d86}
+.enVivo b{font-family:Orbitron;font-weight:900;color:#fff;text-shadow:0 0 8px var(--c);font-size:15px}
+.enVivo i{font-style:normal;margin:0 6px;color:#58708a}
+.enVivo b.salto{animation:pop .5s}
+@keyframes latidoVivo{0%{box-shadow:0 0 0 0 rgba(255,43,78,.7)}70%{box-shadow:0 0 0 9px rgba(255,43,78,0)}100%{box-shadow:0 0 0 0 rgba(255,43,78,0)}}
+@media (max-height:520px) and (orientation:landscape){.enVivo{font-size:11px;padding:3px 10px 3px 6px;margin:-2px auto 0}.enVivo b{font-size:12px}.enVivo .etq{font-size:9px}}

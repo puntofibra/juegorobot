@@ -1039,7 +1039,7 @@ let fraseI = 0, fraseTimer;
 function goMenu() {
   state = 'menu'; L.vis = false; Audio5.mode('menu'); Audio5.thrustOff();
   $('#hud').classList.add('oculto'); $('#btnPausa').classList.add('oculto');
-  pintaCuenta(); $('#cuenta').innerHTML = '';
+  pintaCuenta(); $('#cuenta').innerHTML = ''; cargaHoy();
   show('#sMenu');
   clearInterval(fraseTimer);
   fraseTimer = setInterval(() => { const b = $('#bocadillo'); b.classList.add('out'); setTimeout(() => { fraseI = (fraseI + 1) % FRASES.length; b.textContent = FRASES[fraseI]; b.classList.remove('out'); }, 300); }, 3800);
@@ -1111,6 +1111,24 @@ function confetti() {
     const a = rnd(-Math.PI * .9, -Math.PI * .1), v = rnd(400, 1000);
     P(camX + W / 2 + rnd(-200, 200), H * .7, Math.cos(a) * v, Math.sin(a) * v, rnd(1.5, 2.5), rnd(3, 6), pick(['#19ff6a', '#00e5ff', '#ff2bd6', '#ffd23f', '#ffffff']), 'debris', { grav: 700, vr: rnd(-10, 10), drag: .6 });
   }
+}
+
+/* ---- contador en vivo: jugadores de hoy ---- */
+let hoyPrev = { j: -1, p: -1 }, hoyT = 0;
+function animaNum(el, de, a) {
+  const t0 = performance.now(); el.classList.remove('salto'); void el.offsetWidth; if (de >= 0 && de !== a) el.classList.add('salto');
+  (function f() { const k = Math.min(1, (performance.now() - t0) / 800), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(Math.max(0, de) + (a - Math.max(0, de)) * e).toLocaleString('es-ES'); if (k < 1) requestAnimationFrame(f); })();
+}
+function cargaHoy() {
+  if (!CFG.API) return;
+  clearTimeout(hoyT); hoyT = setTimeout(() => { if (state === 'menu') cargaHoy(); }, 60000);
+  api('hoy').then(d => {
+    if (!d.ok) return;
+    $('#enVivo').classList.remove('oculto');
+    $('#hoyJugTxt').textContent = d.jugadores === 1 ? 'piloto ha volado' : 'pilotos han volado';
+    animaNum($('#hoyJug'), hoyPrev.j, d.jugadores); animaNum($('#hoyPar'), hoyPrev.p, d.partidas);
+    hoyPrev = { j: d.jugadores, p: d.partidas };
+  });
 }
 
 /* ---- API (JSONP) ---- */
