@@ -1167,7 +1167,7 @@ function openRanking() {
   const ul = $('#rkLista');
   if (!CFG.API) { ul.innerHTML = '<li class="vacio">El ranking estará disponible muy pronto</li>'; return; }
   ul.innerHTML = '<li class="vacio">Cargando…</li>';
-  api('top').then(d => { if (!d.ok) throw 0; rkData = d; paintRanking(); }).catch(() => ul.innerHTML = '<li class="vacio">No se pudo cargar el ranking</li>');
+  api('top').then(d => { if (!d.ok) throw 0; rkData = d; aplicaCatalogo(d.catalogo); paintRanking(); }).catch(() => ul.innerHTML = '<li class="vacio">No se pudo cargar el ranking</li>');
 }
 function paintRanking() {
   const ul = $('#rkLista'); if (!rkData) return;
@@ -1392,7 +1392,14 @@ const ITEMS = {
   copa_oro: { nom: 'Copa de Oro · Récord histórico', img: 'img/items/copa_oro.webp', ancho: 1.05 }
 };
 let PREMIO = null, premioAvisado = false;
-function cargaPremio() { if (CFG.API) api('top').then(d => { if (d.ok) { PREMIO = d.item || null; rkData = rkData || d; } }); }
+function aplicaCatalogo(lista) {   // trofeos creados desde el panel admin
+  if (!Array.isArray(lista)) return;
+  lista.forEach(c => { if (c && c.tipo && !ITEMS_BASE.includes(c.tipo)) ITEMS[c.tipo] = { nom: c.nom, img: c.img, ancho: c.ancho || 1, desc: c.desc || '', custom: true }; });
+  store('cat', lista);
+}
+const ITEMS_BASE = Object.keys(ITEMS);
+aplicaCatalogo(load('cat', []));
+function cargaPremio() { if (CFG.API) api('top').then(d => { if (d.ok) { PREMIO = d.item || null; rkData = rkData || d; aplicaCatalogo(d.catalogo); } }); }
 function mostrarItemGanado(item, extra) {
   const it = ITEMS[item.tipo] || { nom: item.tipo, img: 'img/icon-192.png?v=2' };
   let box = $('#finItem');
@@ -1418,7 +1425,7 @@ function abrirSala() {
   salaCont.innerHTML = '<div class="salaVacia">Cargando tu sala…</div>';
   api('inventario', { token: SES.token }).then(d => {
     if (!d.ok) { salaCont.innerHTML = '<div class="salaVacia">No se pudo cargar tu sala</div>'; return; }
-    salaItems = d.items; pintaSala();
+    aplicaCatalogo(d.catalogo); salaItems = d.items; pintaSala();
   });
 }
 function cerrarSala() {
@@ -1528,3 +1535,205 @@ loadImages(() => {
 });
 requestAnimationFrame(loop);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+
+/* =========================================================
+   PANEL DE ADMINISTRACIÓN · 10 toques a Lucas en 5 s + llave NFC
+   ========================================================= */
+(() => {
+  let toques = [], ADM = null, ADMD = null, nfcCtrl = null;
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const fmt = n => (Number(n) || 0).toLocaleString('es-ES');
+  const itemDe = t => ITEMS[t] || { nom: t, img: 'img/icon-192.png?v=2' };
+  const heroe = $('.heroLucas');
+  heroe.addEventListener('pointerdown', () => {
+    if (state !== 'menu') return;
+    const t = performance.now(); toques = toques.filter(x => t - x < 5000); toques.push(t);
+    if (toques.length >= 10) { toques = []; abrirAdmin(); }
+  });
+
+  function msg(t, cls) { const m = $('#admMsg'); m.textContent = t; m.className = cls || ''; }
+  function anim(cls) { $('#nfcAnim').className = 'nfcAnim ' + (cls || ''); }
+  function abrirAdmin() {
+    Audio5.init(); Audio5.record(); vib([30, 40, 30]);
+    show('#sAdmin');
+    if (ADM) return verPanel();
+    $('#admPanel').classList.add('oculto'); $('#admLlave').classList.remove('oculto'); anim('');
+    if (!SES) msg('Primero inicia sesión con la cuenta de administrador.', 'err');
+    else if (!('NDEFReader' in window)) msg('Este navegador no puede leer NFC. Usa Chrome en un móvil Android con NFC activado.', 'err');
+    else msg('Pulsa «Escanear» y acerca tu llave NFC a la parte trasera del móvil');
+  }
+  function cerrarAdmin() { if (nfcCtrl) { nfcCtrl.abort(); nfcCtrl = null; } Audio5.click(); goMenu(); }
+  $$('.admCerrar').forEach(b => b.onclick = cerrarAdmin);
+
+  $('#btnNfc').onclick = async () => {
+    if (!SES) return msg('Primero inicia sesión con la cuenta de administrador.', 'err');
+    if (!('NDEFReader' in window)) return msg('Este navegador no puede leer NFC. Usa Chrome en un móvil Android con NFC activado.', 'err');
+    try {
+      if (nfcCtrl) nfcCtrl.abort();
+      nfcCtrl = new AbortController();
+      const r = new NDEFReader();
+      await r.scan({ signal: nfcCtrl.signal });
+      anim('busca'); msg('Esperando llave… acércala al móvil');
+      r.onreadingerror = () => { anim('err'); msg('No pude leer esa llave. Vuelve a intentarlo (puede que no sea compatible).', 'err'); };
+      r.onreading = e => {
+        const llave = e.serialNumber || '';
+        if (nfcCtrl) { nfcCtrl.abort(); nfcCtrl = null; }
+        if (!llave) { anim('err'); return msg('La llave no tiene número de serie legible.', 'err'); }
+        anim('busca'); msg('Comprobando llave…');
+        api('admin_entrar', { token: SES.token, llave }).then(d => {
+          if (!d.ok) { anim('err'); vib([80, 60, 80]); Audio5.hit && Audio5.hit(); return msg(d.error || 'Llave no autorizada', 'err'); }
+          ADM = d.admin; anim('ok'); vib([30, 30, 120]); Audio5.record();
+          msg(d.nueva ? '¡Llave registrada como llave de administrador!' : '¡Acceso concedido!', 'ok');
+          setTimeout(verPanel, 700);
+        });
+      };
+    } catch (err) {
+      anim('err'); msg(err && err.name === 'NotAllowedError' ? 'Necesito permiso para usar NFC. Acéptalo y vuelve a pulsar.' : 'No se pudo activar el NFC. Comprueba que está encendido en el móvil.', 'err');
+    }
+  };
+
+  function adm(op, datos) {
+    return api('admin', Object.assign({ admin: ADM, op }, datos || {})).then(d => {
+      if (d.caducada) { ADM = null; toast('La sesión de administrador ha caducado'); abrirAdmin(); }
+      return d;
+    });
+  }
+  function verPanel() {
+    $('#admLlave').classList.add('oculto'); $('#admPanel').classList.remove('oculto');
+    recargar();
+  }
+  function recargar() {
+    $('#admCat').innerHTML = '<p class="admNota">Cargando…</p>';
+    return adm('resumen').then(d => { if (!d.ok) return toast(d.error || 'Error'); ADMD = d; aplicaCatalogo(d.catalogo); pintaTodo(); });
+  }
+  $$('#admTabs button').forEach(b => b.onclick = () => {
+    $$('#admTabs button').forEach(x => x.classList.toggle('on', x === b));
+    $$('.admTab').forEach(x => x.classList.toggle('on', x.dataset.t === b.dataset.t)); Audio5.click();
+  });
+  function pintaTodo() { pintaCatalogo(); pintaSelects(); pintaPremios(); pintaJugadores(); }
+
+  /* ---- trofeos ---- */
+  function pintaCatalogo() {
+    $('#admCat').innerHTML = Object.keys(ITEMS).map(t => { const it = ITEMS[t];
+      return `<div class="tr ${it.custom ? '' : 'base'}" data-t="${esc(t)}"><img src="${esc(it.img)}" alt=""><b>${esc(it.nom)}</b><code>${esc(t)}</code></div>`; }).join('');
+    $$('#admCat .tr:not(.base)').forEach(el => el.onclick = () => editarTrofeo(el.dataset.t));
+  }
+  let pngB64 = '';
+  const fT = $('#fTrofeo');
+  function limpiaForm() {
+    fT.reset(); fT.tipo.value = ''; pngB64 = ''; $('#tPrev').removeAttribute('src'); $('#tPrevTxt').style.display = '';
+    $('#tTit').textContent = 'Nuevo trofeo'; $('#tBtn').textContent = 'Crear trofeo'; $('#tCancel').classList.add('oculto'); $('#tAncho').textContent = '100%';
+    $$('#admCat .tr').forEach(x => x.classList.remove('edit'));
+  }
+  function editarTrofeo(t) {
+    const it = ITEMS[t]; limpiaForm();
+    fT.tipo.value = t; fT.nombre.value = it.nom; fT.desc.value = it.desc || ''; fT.ancho.value = it.ancho || 1; $('#tAncho').textContent = Math.round((it.ancho || 1) * 100) + '%';
+    $('#tPrev').src = it.img; $('#tPrevTxt').style.display = 'none';
+    $('#tTit').textContent = 'Editar trofeo: ' + it.nom; $('#tBtn').textContent = 'Guardar cambios'; $('#tCancel').classList.remove('oculto');
+    $(`#admCat .tr[data-t="${t}"]`).classList.add('edit'); fT.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  $('#tCancel').onclick = limpiaForm;
+  fT.ancho.oninput = () => $('#tAncho').textContent = Math.round(fT.ancho.value * 100) + '%';
+  $('#tPng').onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    if (f.type !== 'image/png') { toast('La imagen tiene que ser PNG'); return; }
+    const img = new Image();
+    img.onload = () => {
+      let max = 512, url;
+      do {   // reduce a máx. 512 px conservando la transparencia
+        const k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); url = c.toDataURL('image/png'); max -= 96;
+      } while (url.length > 1500000 && max > 160);
+      pngB64 = url; $('#tPrev').src = url; $('#tPrevTxt').style.display = 'none'; URL.revokeObjectURL(img.src);
+    };
+    img.src = URL.createObjectURL(f);
+  };
+  fT.onsubmit = e => {
+    e.preventDefault();
+    const editando = !!fT.tipo.value;
+    if (!editando && !pngB64) return toast('Sube la imagen PNG del trofeo');
+    const b = $('#tBtn'); b.disabled = true; b.textContent = 'Guardando…';
+    const datos = { nombre: fT.nombre.value, desc: fT.desc.value, ancho: fT.ancho.value };
+    if (pngB64) datos.png = pngB64;
+    (editando ? adm('editarTrofeo', Object.assign({ tipo: fT.tipo.value }, datos)) : adm('crearTrofeo', datos)).then(d => {
+      b.disabled = false;
+      if (!d.ok) { b.textContent = editando ? 'Guardar cambios' : 'Crear trofeo'; return toast(d.error || 'No se pudo guardar'); }
+      toast(editando ? 'Trofeo actualizado' : '¡Trofeo creado!'); Audio5.record(); limpiaForm(); recargar();
+    });
+  };
+
+  /* ---- premio semanal ---- */
+  function opciones(sel, extra) {
+    return extra + Object.keys(ITEMS).map(t => `<option value="${esc(t)}"${t === sel ? ' selected' : ''}>${esc(ITEMS[t].nom)}</option>`).join('');
+  }
+  function pintaSelects() {
+    $('#fRegalar').tipo.innerHTML = opciones('', '<option value="">Elige trofeo…</option>');
+    const b = ADMD.base, fB = $('#fBase');
+    fB.tipo.innerHTML = opciones(b.tipo, `<option value=""${b.tipo ? '' : ' selected'}>Sin premio</option>`);
+    fB.minimo.value = b.minimo; fB.maxDia.value = b.maxDia; fB.texto.value = b.texto;
+    $('#admUsuarios').innerHTML = ADMD.jugadores.map(j => `<option value="${esc(j.usuario)}">`).join('');
+  }
+  $('#fBase').onsubmit = e => {
+    e.preventDefault(); const f = e.target;
+    adm('config', { tipo: f.tipo.value, minimo: f.minimo.value, maxDia: f.maxDia.value, texto: f.texto.value }).then(d => toast(d.ok ? 'Premio por defecto guardado' : d.error));
+  };
+  function pintaPremios() {
+    $('#admSemanas').innerHTML = ADMD.semanas.map((s, i) => { const p = s.prog;
+      return `<div class="admSem${i === 0 ? ' actual' : ''}" data-s="${s.semana}">
+        <div class="sl">${i === 0 ? '<em>ESTA SEMANA</em>' : ''}<b>Semana ${Number(s.semana.split('W')[1])}</b><small>${s.desde} – ${s.hasta}</small></div>
+        <select>${opciones(p ? p.tipo : '__def', `<option value="__def"${p ? '' : ' selected'}>Por defecto</option><option value=""${p && !p.tipo ? ' selected' : ''}>Sin premio</option>`)}</select>
+        <input type="number" min="0" step="100" placeholder="Puntos mín." value="${p && p.minimo ? p.minimo : ''}">
+        <input maxlength="200" placeholder="Texto para los jugadores" value="${esc(p ? p.texto : '')}">
+        <button class="btn sec">Guardar</button></div>`; }).join('');
+    $$('#admSemanas .admSem').forEach(row => {
+      const [sel, min, txt] = row.querySelectorAll('select,input'), b = row.querySelector('button');
+      b.onclick = () => {
+        b.textContent = '…';
+        const datos = sel.value === '__def' ? { semana: row.dataset.s, borrar: true } : { semana: row.dataset.s, tipo: sel.value, minimo: min.value, texto: txt.value };
+        adm('programar', datos).then(d => { b.textContent = d.ok ? '✓ Guardado' : 'Error'; b.classList.toggle('ok', !!d.ok); if (!d.ok) toast(d.error); setTimeout(() => { b.textContent = 'Guardar'; b.classList.remove('ok'); }, 1800); });
+      };
+    });
+  }
+
+  /* ---- jugadores ---- */
+  function pintaJugadores() {
+    const q = $('#admBuscar').value.trim().toLowerCase();
+    const lista = ADMD.jugadores.filter(j => !q || j.usuario.toLowerCase().includes(q) || j.email.toLowerCase().includes(q));
+    $('#jugCnt').textContent = `(${ADMD.jugadores.length} en total · ${ADMD.jugadores.reduce((a, j) => a + Object.values(j.items).reduce((x, y) => x + y, 0), 0)} objetos repartidos)`;
+    $('#admJug').innerHTML = lista.map(j => { const tot = Object.values(j.items).reduce((a, b) => a + b, 0);
+      return `<div class="jg" data-id="${esc(j.id)}"><div class="fila1">
+        <span class="jPos">${ADMD.jugadores.indexOf(j) + 1}</span>
+        <span class="jNom"><b>${esc(j.usuario)}${j.google ? ' <small>· Google</small>' : ''}</b><small>${esc(j.email)}</small></span>
+        <span class="jNum">${fmt(j.record)}<small>récord</small></span>
+        <span class="jNum">${fmt(j.partidas)}<small>partidas</small></span>
+        <span class="jIco">${tot ? Object.keys(j.items).map(t => `<span title="${esc(itemDe(t).nom)}"><img src="${esc(itemDe(t).img)}" alt="">×${j.items[t]}</span>`).join('') : '<small style="color:#678">sin objetos</small>'}</span>
+      </div><div class="det oculto"></div></div>`; }).join('') || '<p class="admNota">Ningún jugador coincide.</p>';
+    $$('#admJug .fila1').forEach(f => f.onclick = () => detalle(f.parentNode));
+  }
+  $('#admBuscar').oninput = () => ADMD && pintaJugadores();
+  function detalle(el) {
+    const det = el.querySelector('.det');
+    if (!det.classList.contains('oculto')) return det.classList.add('oculto');
+    det.classList.remove('oculto'); det.innerHTML = 'Cargando objetos…';
+    adm('itemsJugador', { id: el.dataset.id }).then(d => {
+      if (!d.ok) return det.textContent = 'Error';
+      det.innerHTML = d.items.length ? d.items.map(o => `<div class="it"><img src="${esc(itemDe(o.tipo).img)}" alt=""><code>${esc(o.id)}</code><span>${esc(itemDe(o.tipo).nom)} · ${o.fecha ? new Date(o.fecha).toLocaleDateString('es-ES') : ''} · ${esc(o.origen)}</span><button data-id="${esc(o.id)}">Quitar</button></div>`).join('') : 'Este jugador aún no tiene objetos.';
+      det.querySelectorAll('button').forEach(b => b.onclick = ev => {
+        ev.stopPropagation();
+        if (!confirm('¿Quitar el objeto ' + b.dataset.id + ' a este jugador?')) return;
+        adm('quitarItem', { id: b.dataset.id }).then(r => { if (r.ok) { toast('Objeto quitado'); recargar(); } else toast(r.error); });
+      });
+    });
+  }
+
+  /* ---- regalar ---- */
+  $('#fRegalar').onsubmit = e => {
+    e.preventDefault(); const f = e.target, b = f.querySelector('button'); b.disabled = true;
+    adm('regalar', { usuario: f.usuario.value.trim(), tipo: f.tipo.value, motivo: f.motivo.value }).then(d => {
+      b.disabled = false;
+      if (!d.ok) return toast(d.error || 'No se pudo regalar');
+      toast(`¡Regalado a ${d.usuario}! ID ${d.id}`); Audio5.record(); f.reset(); recargar();
+    });
+  };
+})();

@@ -395,3 +395,89 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
 .finItem.plata{border-color:rgba(220,235,255,.7);background:linear-gradient(90deg,rgba(210,225,245,.18),rgba(0,229,255,.06));box-shadow:0 0 22px rgba(200,225,255,.25)}
 .finItem.plata small{color:#e6f1ff}
 .finExtra{margin-top:6px}
+
+/* ===== Panel de administración ===== */
+.adminScr{padding:10px;z-index:30;background:rgba(3,4,10,.86);backdrop-filter:blur(6px)}
+.admBox{width:min(1040px,100%);height:100%;display:flex;align-items:center;justify-content:center}
+.admLlave{text-align:center;max-width:420px;padding:26px 24px;border-radius:22px;background:linear-gradient(160deg,rgba(14,22,40,.92),rgba(6,8,18,.95));border:1px solid rgba(0,229,255,.35);box-shadow:0 0 40px rgba(0,229,255,.15)}
+.admLlave h2{font-family:Orbitron;font-size:20px;letter-spacing:.08em;color:#cffaff;margin:10px 0 6px}
+.admLlave p{color:#a9c4cc;font-size:15px;min-height:40px}
+.admLlave p.err{color:#ff7a92}.admLlave p.ok{color:var(--v)}
+.admLlave .btn{width:100%;margin-top:10px}
+.nfcAnim{position:relative;width:86px;height:86px;margin:0 auto;display:grid;place-items:center;color:var(--c)}
+.nfcAnim svg{width:62px;height:62px;filter:drop-shadow(0 0 10px rgba(0,229,255,.6));position:relative;z-index:1}
+.nfcAnim i{position:absolute;inset:0;border-radius:50%;border:2px solid var(--c);opacity:0}
+.nfcAnim.busca i{animation:nfcOnda 1.6s ease-out infinite}.nfcAnim.busca i+i{animation-delay:.8s}
+.nfcAnim.ok{color:var(--v)}.nfcAnim.err{color:#ff5c7a;animation:sacude .4s}
+@keyframes nfcOnda{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.5);opacity:0}}
+@keyframes sacude{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.admPanel{width:100%;height:100%;display:flex;flex-direction:column;border-radius:18px;overflow:hidden;background:linear-gradient(160deg,rgba(12,18,34,.97),rgba(5,7,16,.98));border:1px solid rgba(0,229,255,.3)}
+.admHead{display:flex;align-items:center;gap:12px;padding:8px 10px 8px 16px;border-bottom:1px solid rgba(0,229,255,.2);flex:0 0 auto}
+.admHead>b{font-family:Orbitron;font-size:14px;letter-spacing:.14em;color:var(--o);white-space:nowrap}
+.admHead nav{display:flex;gap:6px;flex:1;overflow-x:auto}
+.admHead nav button{padding:7px 12px;border-radius:10px;font-weight:700;font-size:14px;color:#9fc;white-space:nowrap;border:1px solid transparent}
+.admHead nav button.on{background:rgba(0,229,255,.12);border-color:rgba(0,229,255,.45);color:#e6fdff}
+.admX{width:36px;height:36px;border-radius:10px;font-size:18px;color:#ccd;background:rgba(255,255,255,.06);flex:0 0 auto}
+.admCont{flex:1;overflow-y:auto;padding:12px 16px 20px;touch-action:pan-y;user-select:text;-webkit-user-select:text}
+.admTab{display:none}.admTab.on{display:block;animation:entra .3s both}
+.admTab h3{font-family:Orbitron;font-size:13px;letter-spacing:.1em;color:#7fe9ff;margin:6px 0 10px;text-transform:uppercase}
+.admTab h3 small{font-family:Rajdhani;text-transform:none;letter-spacing:0;color:#789;font-size:13px}
+.adminScr input,.adminScr select{padding:9px 11px;font-size:15px}
+.adminScr select{width:100%;border-radius:12px;border:1px solid rgba(0,229,255,.35);background:rgba(4,10,22,.9);color:var(--tx);font:inherit;font-size:15px;padding:9px 11px}
+.admCat{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-bottom:18px}
+.admCat .tr{position:relative;padding:8px 6px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);text-align:center;cursor:pointer}
+.admCat .tr img{width:64px;height:64px;object-fit:contain;display:block;margin:0 auto 4px}
+.admCat .tr b{display:block;font-size:13px;line-height:1.15}
+.admCat .tr code{font-size:10px;color:#789}
+.admCat .tr.base{cursor:default}.admCat .tr.base::after{content:"de serie";position:absolute;top:5px;right:6px;font-size:9px;color:#678}
+.admCat .tr.edit{border-color:var(--o);box-shadow:0 0 14px rgba(255,210,63,.3)}
+.admForm{display:flex;gap:14px;align-items:stretch}
+.admForm.linea{flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
+.admForm.linea>*{flex:1 1 140px;width:auto}.admForm.linea .btn{flex:0 0 auto;margin:0}
+.admForm.col{flex-direction:column;max-width:440px;gap:8px}
+.admImg{flex:0 0 150px;height:150px;border-radius:16px;border:2px dashed rgba(0,229,255,.4);display:grid;place-items:center;text-align:center;cursor:pointer;position:relative;overflow:hidden;
+  background:repeating-conic-gradient(rgba(255,255,255,.05) 0 25%,transparent 0 50%) 0 0/18px 18px;color:#9cc;font-size:14px}
+.admImg input{display:none}.admImg img{position:absolute;inset:8px;width:calc(100% - 16px);height:calc(100% - 16px);object-fit:contain}
+.admImg img:not([src]),.admImg img[src=""]{display:none}
+.admCampos{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
+.admRango{display:flex;align-items:center;gap:10px;color:#9bb;font-size:14px}.admRango input{flex:1;padding:0}.admRango em{font-style:normal;color:#fff;width:44px}
+.admFila{display:flex;gap:8px}.admFila .btn{margin:0}
+.admSemanas{display:flex;flex-direction:column;gap:8px}
+.admSem{display:grid;grid-template-columns:120px 1.3fr 110px 1.6fr auto;gap:8px;align-items:center;padding:8px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.admSem.actual{border-color:rgba(25,255,106,.5);background:rgba(25,255,106,.05)}
+.admSem .sl b{display:block;font-size:15px}.admSem .sl small{color:#8ab;font-size:12px}
+.admSem .sl em{font-style:normal;color:var(--v);font-size:11px;font-weight:700;letter-spacing:.08em}
+.admSem .btn{margin:0;padding:8px 12px;font-size:14px}
+.admSem .ok{color:var(--v)}
+.admJug{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.jg{border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.jg .fila1{display:grid;grid-template-columns:28px 1.4fr 80px 70px 2fr;gap:10px;align-items:center;padding:8px 10px;cursor:pointer}
+.jg .jPos{color:#678;font-weight:700}
+.jg .jNom b{display:block;font-size:15px}.jg .jNom small{color:#789;font-size:12px;word-break:break-all}
+.jg .jNum{text-align:right;font-variant-numeric:tabular-nums}.jg .jNum small{display:block;color:#789;font-size:11px}
+.jg .jIco{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.jg .jIco span{display:inline-flex;align-items:center;gap:2px;font-size:13px;font-weight:700;color:#fff}
+.jg .jIco img{width:26px;height:26px;object-fit:contain}
+.jg .det{padding:0 10px 10px 48px;font-size:13px;color:#9ab}
+.jg .det .it{display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid rgba(255,255,255,.06)}
+.jg .det .it img{width:24px;height:24px;object-fit:contain}.jg .det .it code{color:#cde}.jg .det .it span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jg .det .it button{color:#ff7a92;font-size:12px;padding:3px 8px;border:1px solid rgba(255,92,122,.4);border-radius:8px}
+.admNota{color:#789;font-size:13px;margin-top:10px}
+@media (max-height:520px) and (orientation:landscape){
+  .adminScr{padding:6px}
+  .admHead{padding:5px 8px 5px 12px}.admHead>b{font-size:12px}.admHead nav button{padding:5px 10px;font-size:13px}
+  .admCont{padding:8px 12px 14px}
+  .admLlave{padding:14px 18px}.nfcAnim{width:64px;height:64px}.nfcAnim svg{width:46px;height:46px}.admLlave h2{font-size:17px;margin:4px 0}
+  .admImg{flex-basis:120px;height:120px}
+  .admSem{grid-template-columns:100px 1.2fr 90px 1.4fr auto;padding:6px}
+}
+@media (orientation:portrait){
+  .admForm{flex-direction:column}.admImg{flex-basis:auto;width:150px}
+  .admSem{grid-template-columns:1fr 1fr}.jg .fila1{grid-template-columns:24px 1fr 70px}.jg .jIco{grid-column:1/-1;justify-content:flex-start}
+}
+/* Cómo se juega: dos botones */
+.ayudaBtns{display:flex;gap:10px;margin-top:8px}
+.ayudaBtns .btn{flex:1;margin:0!important;width:auto!important}
+.webCreador{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;font-size:17px;padding:13px}
+.webCreador svg{width:20px;height:20px}
+.adminScr input:not([type=range]){text-align:left}.jg .jNom,.jg .jNum{min-width:0}
