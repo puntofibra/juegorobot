@@ -1223,7 +1223,8 @@ document.addEventListener('pointerdown', () => Audio5.init(), { once: true });
 let hctx = null;
 const FX_MENU = { cv: $('#heroFx'), img: $('#heroImg'), noz: [[.368, .945, 1], [.457, .96, 1.15], [.55, .945, 1]], parts: [] };   // toberas: x, y relativos a la imagen
 const FX_RANK = { cv: $('#rankFx'), img: $('#rankImg'), noz: [[.245, .955, .9], [.36, .975, 1.05], [.487, .955, .9]], parts: [] };
-FX_MENU.g = FX_MENU.cv.getContext('2d'); FX_RANK.g = FX_RANK.cv.getContext('2d');
+const FX_AYUDA = { cv: $('#ayudaFx'), img: $('#ayudaImg'), noz: [[.27, .955, .9], [.37, .975, 1.05], [.478, .955, .9]], parts: [] };
+FX_MENU.g = FX_MENU.cv.getContext('2d'); FX_RANK.g = FX_RANK.cv.getContext('2d'); FX_AYUDA.g = FX_AYUDA.cv.getContext('2d');
 function flamePath(x, y, w, L, wob) {
   hctx.beginPath(); hctx.moveTo(x - w / 2, y);
   hctx.bezierCurveTo(x - w / 2, y + L * .35, x - w * .2 + wob * .5, y + L * .7, x + wob, y + L);
@@ -1369,6 +1370,7 @@ function loop(now) {
   update(dt); render();
   if (state === 'menu' || state === 'load') drawHeroFire(dt, now / 1000, FX_MENU);
   if ($('#sRanking').classList.contains('show')) drawHeroFire(dt, now / 1000, FX_RANK);
+  if ($('#sAyuda').classList.contains('show')) drawHeroFire(dt, now / 1000, FX_AYUDA);
   requestAnimationFrame(loop);
 }
 resize(); paintSnd();

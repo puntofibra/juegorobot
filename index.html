@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -85,7 +85,7 @@
 <!-- Ayuda -->
 <section id="sAyuda" class="screen">
   <div class="card ancha">
-    <img src="img/senala.webp" alt="Lucas señalando" class="lucasImg lado">
+    <div class="fxBox"><canvas id="ayudaFx"></canvas><img id="ayudaImg" src="img/ayuda.webp" alt="LucasBot señalando" class="lucasImg lado"></div>
     <div>
       <h2>Cómo se juega</h2>
       <ul class="ayuda">
@@ -226,6 +226,6 @@
 </div>
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="game.js?v=15"></script>
+<script src="game.js?v=16"></script>
 </body>
 </html>
