@@ -267,12 +267,20 @@ function enviar_(p) {
   const sem = semana_(new Date());
   let nuevoRecord = false;
   const pr = premioItem_();
-  let item = null;
+  let item = null, copa = null;
   conLock_(() => {
+    // copas: se compara con los récords ANTES de guardar esta partida
+    const prev = calcTop_(), recSem = prev.semanaFull.length ? prev.semanaFull[0].puntos : 0, recHist = prev.total.length ? prev.total[0].puntos : 0;
+    let tipoCopa = '';
+    if (recHist > 0 && puntos > recHist) tipoCopa = 'copa_oro';   // la plata se reparte al cerrar la semana (cierreSemanal)
     hojaPuntos_().appendRow([new Date(), sem, usuario, puntos, metros, datos, Math.round(seg), s.row[U.Id], partida, Math.round(real)]);
     if (pr.tipo && puntos >= pr.minimo && seg >= 60 && itemsHoy_(s.row[U.Id]) < pr.maxDia) {
       item = { id: nuevoIdItem_(), tipo: pr.tipo };
       hojaItems_().appendRow([item.id, item.tipo, s.row[U.Id], usuario, new Date(), 'Premio ' + sem + ' (' + puntos + ' pts)', '', '', '']);
+    }
+    if (tipoCopa) {
+      copa = { id: nuevoIdItem_(), tipo: tipoCopa };
+      hojaItems_().appendRow([copa.id, copa.tipo, s.row[U.Id], usuario, new Date(), (tipoCopa === 'copa_oro' ? 'Récord histórico ' : 'Récord semanal ') + sem + ' (' + puntos + ' pts, anterior ' + (tipoCopa === 'copa_oro' ? recHist : recSem) + ')', '', '', '']);
     }
     const s2 = porToken_(p.token); const row = s2.row;
     row[U.Partidas] = (Number(row[U.Partidas]) || 0) + 1;
@@ -282,7 +290,7 @@ function enviar_(p) {
   CacheService.getScriptCache().removeAll(['top', 'hoy']);
   const t = calcTop_();
   const idx = t.semanaFull.findIndex(r => r.nombre.toLowerCase() === String(usuario).toLowerCase());
-  return { ok: true, puesto: idx + 1, nuevoRecord, item };
+  return { ok: true, puesto: idx + 1, nuevoRecord, item, copa, items: [copa, item].filter(Boolean) };
 }
 function calcTop_() {
   const sh = hojaPuntos_(), n = sh.getLastRow() - 1;
@@ -400,4 +408,47 @@ function itemsHoy_(uid) {
 function sospecha_(row, motivo, puntos, seg, real) {
   try { hoja_('Sospechosos', ['Fecha', 'Usuario', 'IdUsuario', 'Motivo', 'Puntos', 'SegDeclarados', 'SegReales'])
     .appendRow([new Date(), row[U.Usuario], row[U.Id], motivo, puntos, Math.round(seg), Math.round(real || 0)]); } catch (e) {}
+}
+
+/* ================= COPAS ================= */
+/* Copa de plata: al cerrar la semana (domingo a medianoche) se entrega al puesto 1 de esa semana.
+   Lo lanza un activador semanal (lunes 00:00-01:00) que crea instalarCierre(). No se repite dos veces la misma semana. */
+function cierreSemanal() {
+  const sem = semana_(new Date(Date.now() - 3 * 3600 * 1000));   // la semana que acaba de terminar
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('plata_' + sem)) return 'Ya entregada ' + sem;
+  const sh = hojaPuntos_(), n = sh.getLastRow() - 1; if (n <= 0) return 'Sin partidas';
+  let mejor = null;
+  sh.getRange(2, 1, n, 8).getValues().forEach(r => {
+    if (String(r[1]) !== sem) return;
+    const pts = Number(r[3]) || 0;
+    if (!mejor || pts > mejor.pts) mejor = { pts, usuario: String(r[2]), uid: String(r[7]) };
+  });
+  if (!mejor) { props.setProperty('plata_' + sem, 'nadie'); return 'Nadie jugó ' + sem; }
+  const id = nuevoIdItem_();
+  hojaItems_().appendRow([id, 'copa_plata', mejor.uid, mejor.usuario, new Date(), 'Campeón de la semana ' + sem + ' (' + mejor.pts + ' pts)', '', '', '']);
+  props.setProperty('plata_' + sem, id);
+  return mejor.usuario + ' -> copa_plata ' + id;
+}
+/* Ejecutar UNA vez a mano: programa el cierre semanal automático */
+function instalarCierre() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'cierreSemanal').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('cierreSemanal').timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(0).inTimezone(TZ).everyWeeks(1).create();
+  return 'Cierre semanal programado';
+}
+/* Ejecutar a mano: regala copas a jugadores concretos (cada copa con su ID único) */
+function regalarCopas() {
+  const nombres = ['maicol', 'futurmovil'], f = filas_(), sh = hojaItems_(), res = [];
+  nombres.forEach(nom => {
+    const i = buscar_(f.rows, 'Usuario', nom);
+    if (i < 0) { res.push(nom + ': NO ENCONTRADO'); return; }
+    const row = f.rows[i];
+    ['copa_oro', 'copa_plata'].forEach(t => {
+      const id = nuevoIdItem_();
+      sh.appendRow([id, t, row[U.Id], row[U.Usuario], new Date(), 'Regalo: récord histórico conseguido antes de existir las copas', '', '', '']);
+      res.push(row[U.Usuario] + ' -> ' + t + ' ' + id);
+    });
+  });
+  Logger.log(res.join('\n'));
+  return res;
 }
