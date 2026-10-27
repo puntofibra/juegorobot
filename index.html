@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -69,7 +69,7 @@
       <div class="titulo"><span>presenta</span><b>LUCASBOT<em>5G</em></b></div>
       <div class="record">Tu récord: <b id="mRecord">0</b></div>
       <div id="enVivo" class="enVivo oculto"><span class="punto"></span><span class="etq">HOY</span><span class="txt"><b id="hoyJug">0</b> <span id="hoyJugTxt">pilotos han volado</span><i>·</i><b id="hoyPar">0</b> vuelos</span></div>
-      <div id="miCuenta" class="cuenta oculto"><span class="avatar"></span><span class="cnom"><small>Jugando como</small><b id="cUsuario"></b></span><button id="btnSalirCuenta" class="btn ter mini">Salir</button></div>
+      <div id="miCuenta" class="cuenta oculto"><span class="avatar"></span><span class="cnom"><small>Jugando como</small><b id="cUsuario"></b></span><button id="btnInventario" class="btn sec mini inv"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v9l-8 4-8-4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 8l8 4 8-4M12 12v9" fill="none" stroke="currentColor" stroke-width="2"/></svg>Inventario</button><button id="btnSalirCuenta" class="btn ter mini">Salir</button></div>
       <button id="btnJugar" class="btn jugar"><span>JUGAR</span></button>
       <div class="fila">
         <button id="btnRanking" class="btn sec">Ranking</button>
@@ -123,6 +123,7 @@
         <div><b id="fBest">0</b><small>récord</small></div>
       </div>
       <div class="envio" id="envio"></div>
+      <div id="finItem" class="finItem oculto"><img alt=""><div><small>¡OBJETO CONSEGUIDO!</small><b></b><code></code></div><button class="btn sec mini" id="btnVerSala">Ver en mi sala</button></div>
       <button id="btnOtra" class="btn jugar peq">Otra vez</button>
       <div class="fila">
         <button id="btnFinRank" class="btn sec">Ranking</button>
@@ -145,6 +146,22 @@
       <button class="btn jugar peq" data-cerrar>Cerrar</button>
     </div>
   </div>
+</section>
+
+<!-- Sala de inventario -->
+<section id="sInv" class="sala">
+  <div class="salaFondo"></div>
+  <div class="salaBox" id="salaBox">
+    <div class="salaItems" id="salaItems"></div>
+  </div>
+  <div class="salaTop">
+    <button class="btn sec mini" id="btnSalaVolver">← Volver</button>
+    <div class="salaTit"><small>SALA DE</small><b id="salaNom">—</b></div>
+    <div class="salaCnt"><b id="salaCnt">0</b><small>objetos</small></div>
+  </div>
+  <div class="salaAyuda" id="salaAyuda">Arrastra tus objetos para colocarlos donde quieras</div>
+  <div class="salaEstado" id="salaEstado"></div>
+  <div class="itemInfo oculto" id="itemInfo"><img alt=""><div><b></b><code></code><small></small></div></div>
 </section>
 
 <!-- Acceso -->
@@ -227,6 +244,6 @@
 </div>
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="game.js?v=17"></script>
+<script src="game.js?v=18"></script>
 </body>
 </html>

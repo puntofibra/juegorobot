@@ -378,7 +378,7 @@ function spawnChunk() {
 
 /* ---------- partida ---------- */
 function resetGame() {
-  camX = 0; speed = 0; meters = 0; coins = 0; bonus = 0; combo = 0; comboT = 0; playT = 0;
+  camX = 0; speed = 0; meters = 0; coins = 0; bonus = 0; combo = 0; comboT = 0; playT = 0; premioAvisado = false; $('#finItem').classList.add('oculto');
   timeScale = 1; hitStop = 0; shake = 0; holding = false;
   coinsArr = []; lasers = []; viruses = []; missiles = []; powers = []; parts = []; texts = []; warns = [];
   Object.assign(pw, { escudo: false, iman: 0, turbo: 0, x2: 0, invul: 0 });
@@ -454,7 +454,7 @@ function update(dt) {
     speed = lerp(speed, target, Math.min(1, dt * (pw.turbo > 0 ? 4 : 1.6)));
   } else if (state === 'dying') speed = lerp(speed, 0, Math.min(1, dt * 1.6));
   camX += speed * dt;
-  if (state === 'play') { meters += speed * dt / 40; playT += dt; }
+  if (state === 'play') { meters += speed * dt / 40; playT += dt; if (!premioAvisado && PREMIO && SES && score() >= PREMIO.minimo) { premioAvisado = true; const it = ITEMS[PREMIO.tipo]; showBanner('¡OBJETO DESBLOQUEADO!', (it ? it.nom : PREMIO.tipo).toUpperCase(), '#ff9a2b'); Audio5.record(); flash('#ff9a2b', .25); } }
 
   // zonas
   const zn = Math.floor(meters / 800);
@@ -1070,6 +1070,7 @@ window.addEventListener('orientationchange', () => setTimeout(resize, 250));
 window.matchMedia('(orientation:portrait)').addEventListener && window.matchMedia('(orientation:portrait)').addEventListener('change', () => { if (enVertical()) pause(); setTimeout(resize, 250); });
 function startGame() {
   if (enVertical()) { pantallaJuego(); return; }
+  if ($('#sInv').classList.contains('show')) return;
   if (!SES) { abrirLogin('entrar'); return; }
   pantallaJuego();
   Audio5.init(); Audio5.click();
@@ -1153,6 +1154,7 @@ function enviar() {
       if (d.ok) {
         SES.perfil.partidas++; if (d.nuevoRecord) SES.perfil.record = r.pts; store('ses', SES);
         $('#envio').innerHTML = `Ranking semanal: puesto <b style="color:#19ff6a">#${d.puesto}</b>` + (d.nuevoRecord ? ' · <b style="color:#ffd23f">¡récord personal guardado!</b>' : '');
+        if (d.item) mostrarItemGanado(d.item);
       } else $('#envio').textContent = d.error || 'No se pudo guardar';
     })
     .catch(() => $('#envio').textContent = 'Sin conexión con el ranking');
@@ -1170,7 +1172,7 @@ function paintRanking() {
   const ul = $('#rkLista'); if (!rkData) return;
   const list = rkData[rkTab] || [], yo = (SES ? SES.perfil.usuario : '').toLowerCase();
   const pr = $('#premio');
-  if (rkTab === 'semana' && rkData.premio) { pr.textContent = 'Premio de la semana: ' + rkData.premio; pr.classList.remove('oculto'); } else pr.classList.add('oculto');
+  if (rkTab === 'semana' && rkData.premio) { const it = rkData.item && ITEMS[rkData.item.tipo]; pr.innerHTML = (it ? `<img src="${it.img}" alt="">` : '') + 'Premio de la semana: <b></b>'; pr.querySelector('b').textContent = rkData.premio; pr.classList.remove('oculto'); } else pr.classList.add('oculto');
   if (!list.length) { ul.innerHTML = '<li class="vacio">Todavía no hay puntuaciones. ¡Sé el primero!</li>'; return; }
   ul.innerHTML = list.map((r, i) => `<li class="p${i + 1} ${r.nombre.toLowerCase() === yo ? 'yo' : ''}" style="animation-delay:${i * 35}ms"><span class="n">${i + 1}</span><span class="nm"></span><span class="p">${Number(r.puntos).toLocaleString('es-ES')}</span></li>`).join('');
   ul.querySelectorAll('.nm').forEach((el, i) => el.textContent = list[i].nombre);
@@ -1378,6 +1380,116 @@ if (SES) api('yo', { token: SES.token }).then(r => {
   if (r.ok) { SES.perfil = r.perfil; store('ses', SES); if (r.perfil.record > best) { best = r.perfil.record; store('best', best); } pintaCuenta(); }
   else if (r.sesion === false) { SES = null; store('ses', null); pintaCuenta(); }
 });
+
+
+/* =========================================================
+   ITEMS COLECCIONABLES Y SALA DE INVENTARIO
+   ========================================================= */
+const ITEMS = {
+  calabaza: { nom: 'Calabaza Bot', img: 'img/items/calabaza.webp', ancho: 1 }
+};
+let PREMIO = null, premioAvisado = false;
+function cargaPremio() { if (CFG.API) api('top').then(d => { if (d.ok) { PREMIO = d.item || null; rkData = rkData || d; } }); }
+function mostrarItemGanado(item) {
+  const it = ITEMS[item.tipo] || { nom: item.tipo, img: 'img/icon-192.png?v=2' }, box = $('#finItem');
+  box.querySelector('img').src = it.img; box.querySelector('b').textContent = it.nom; box.querySelector('code').textContent = 'ID ' + item.id;
+  box.classList.remove('oculto'); box.style.animation = 'none'; void box.offsetWidth; box.style.animation = '';
+  Audio5.record(); flash('#ff9a2b', .3); vib([40, 30, 80]);
+  salaNuevos.add(item.id);
+}
+
+let salaItems = [], salaNuevos = new Set(), salaCambios = new Map(), salaT = 0, salaZ = 1;
+const salaBox = $('#salaBox'), salaCont = $('#salaItems');
+function abrirSala() {
+  if (!SES) return abrirLogin('entrar');
+  Audio5.init(); Audio5.click();
+  $('#sInv').classList.add('show'); $('#salaNom').textContent = SES.perfil.usuario;
+  $('#itemInfo').classList.add('oculto'); $('#salaAyuda').style.opacity = 1;
+  salaCont.innerHTML = '<div class="salaVacia">Cargando tu sala…</div>';
+  api('inventario', { token: SES.token }).then(d => {
+    if (!d.ok) { salaCont.innerHTML = '<div class="salaVacia">No se pudo cargar tu sala</div>'; return; }
+    salaItems = d.items; pintaSala();
+  });
+}
+function cerrarSala() { guardaSala(true); $('#sInv').classList.remove('show'); Audio5.click(); }
+function posPorDefecto(i) {   // colocación inicial ordenada sobre el suelo
+  const fila = Math.floor(i / 7), col = i % 7;
+  return { x: .22 + col * .095 + (fila % 2) * .045, y: Math.min(.97, .74 + fila * .07) };
+}
+function tamItem(y, tipo) { return (5.5 + 7 * Math.max(0, y - .45)) * ((ITEMS[tipo] || {}).ancho || 1); }   // % del ancho de la sala: más grande cuanto más cerca
+function pintaSala() {
+  salaCont.innerHTML = '';
+  $('#salaCnt').textContent = salaItems.length;
+  if (!salaItems.length) {
+    const it = PREMIO && ITEMS[PREMIO.tipo];
+    salaCont.innerHTML = `<div class="salaVacia">${it ? `<img src="${it.img}" alt="">` : ''}Tu sala está vacía.<br>${PREMIO ? `Haz más de <b>${PREMIO.minimo.toLocaleString('es-ES')}</b> puntos en una partida para conseguir tu primer objeto.` : 'Consigue objetos superando los retos semanales.'}</div>`;
+    return;
+  }
+  let sinPos = 0;
+  salaItems.forEach(o => { if (o.x == null || o.y == null) { const p = posPorDefecto(sinPos++); o.x = p.x; o.y = p.y; salaCambios.set(o.id, o); } salaZ = Math.max(salaZ, (o.z || 0) + 1); });
+  salaItems.forEach(o => {
+    const it = ITEMS[o.tipo] || { nom: o.tipo, img: 'img/icon-192.png?v=2' };
+    const el = document.createElement('div'); el.className = 'item' + (salaNuevos.has(o.id) ? ' nuevo' : ''); el.dataset.id = o.id;
+    el.innerHTML = `<img src="${it.img}" alt="${it.nom}" draggable="false">`;
+    salaCont.appendChild(el); colocaItem(el, o); arrastrable(el, o, it);
+  });
+  salaNuevos.clear();
+  if (salaCambios.size) guardaSala();
+}
+function colocaItem(el, o) {
+  el.style.left = (o.x * 100) + '%'; el.style.top = (o.y * 100) + '%';
+  el.style.width = tamItem(o.y, o.tipo) + '%'; el.style.zIndex = Math.round(o.y * 1000) * 100 + (o.z || 0) % 100;
+}
+function arrastrable(el, o, it) {
+  let ini = null;
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault(); el.setPointerCapture(e.pointerId);
+    const r = salaBox.getBoundingClientRect();
+    ini = { px: e.clientX, py: e.clientY, x: o.x, y: o.y, w: r.width, h: r.height, movido: false };
+    $('#itemInfo').classList.add('oculto');
+  });
+  el.addEventListener('pointermove', e => {
+    if (!ini) return;
+    const dx = e.clientX - ini.px, dy = e.clientY - ini.py;
+    if (!ini.movido && Math.hypot(dx, dy) < 6) return;
+    if (!ini.movido) { ini.movido = true; el.classList.add('arrastra'); o.z = salaZ++; $('#salaAyuda').style.opacity = 0; }
+    o.x = clamp(ini.x + dx / ini.w, .03, .97); o.y = clamp(ini.y + dy / ini.h, .12, .995);
+    colocaItem(el, o);
+  });
+  const fin = () => {
+    if (!ini) return;
+    if (ini.movido) { el.classList.remove('arrastra'); salaCambios.set(o.id, o); guardaSala(); Audio5.click(); }
+    else infoItem(el, o, it);
+    ini = null;
+  };
+  el.addEventListener('pointerup', fin); el.addEventListener('pointercancel', fin);
+}
+function infoItem(el, o, it) {
+  const box = $('#itemInfo'), r = el.getBoundingClientRect(), sr = $('#sInv').getBoundingClientRect();
+  box.querySelector('img').src = it.img; box.querySelector('b').textContent = it.nom;
+  box.querySelector('code').textContent = 'ID ' + o.id;
+  box.querySelector('small').textContent = o.fecha ? 'Conseguido el ' + new Date(o.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  box.style.left = (r.left + r.width / 2 - sr.left) + 'px'; box.style.top = Math.max(80, r.top - 8 - sr.top) + 'px';
+  box.classList.remove('oculto'); box.style.animation = 'none'; void box.offsetWidth; box.style.animation = '';
+  clearTimeout(box._t); box._t = setTimeout(() => box.classList.add('oculto'), 3500);
+}
+function guardaSala(ya) {
+  clearTimeout(salaT);
+  const enviar = () => {
+    if (!salaCambios.size || !SES) return;
+    const pos = [...salaCambios.values()].map(o => ({ id: o.id, x: o.x, y: o.y, z: o.z || 0 })); salaCambios.clear();
+    const est = $('#salaEstado'); est.textContent = 'Guardando…'; est.classList.add('on');
+    api('sala', { token: SES.token, pos }).then(d => { est.textContent = d.ok ? '✓ Guardado' : 'No se pudo guardar'; setTimeout(() => est.classList.remove('on'), 1500); });
+  };
+  if (ya) enviar(); else salaT = setTimeout(enviar, 900);
+}
+$('#btnInventario').onclick = abrirSala;
+$('#btnSalaVolver').onclick = cerrarSala;
+$('#btnVerSala').onclick = () => { show(null); abrirSala(); };
+$('#sInv').addEventListener('pointerdown', e => { if (!e.target.closest('.item')) $('#itemInfo').classList.add('oculto'); });
+window.addEventListener('keydown', e => { if (e.code === 'Escape' && $('#sInv').classList.contains('show')) cerrarSala(); });
+window.addEventListener('pagehide', () => guardaSala(true));
+cargaPremio();
 
 /* =========================================================
    ARRANQUE

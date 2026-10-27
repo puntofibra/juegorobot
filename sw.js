@@ -1,6 +1,6 @@
-const CACHE = 'lucas5g-v20';
-const ASSETS = ['./', 'index.html', 'style.css?v=13', 'game.js?v=17', 'manifest.json?v=2',
-  'img/gamer.webp', 'img/ayuda.webp', 'img/logo.webp', 'img/caido.webp', 'img/luna.webp', 'img/altos.webp', 'img/altos-luz.webp', 'img/bajos.webp', 'img/bajos-luz.webp', 'img/capa.webp', 'img/superlucas.webp', 'img/vuela.webp', 'img/saluda.webp', 'img/celebra.webp', 'img/duda.webp', 'img/senala.webp', 'img/mando.webp',
+const CACHE = 'lucas5g-v21';
+const ASSETS = ['./', 'index.html', 'style.css?v=14', 'game.js?v=18', 'manifest.json?v=2',
+  'img/gamer.webp', 'img/ayuda.webp', 'img/sala.webp', 'img/items/calabaza.webp', 'img/logo.webp', 'img/caido.webp', 'img/luna.webp', 'img/altos.webp', 'img/altos-luz.webp', 'img/bajos.webp', 'img/bajos-luz.webp', 'img/capa.webp', 'img/superlucas.webp', 'img/vuela.webp', 'img/saluda.webp', 'img/celebra.webp', 'img/duda.webp', 'img/senala.webp', 'img/mando.webp',
   'img/switch.webp', 'img/telefono.webp', 'img/portatil.webp', 'img/halloween.webp', 'img/navidad.webp', 'img/piscina.webp',
   'img/icon-192.png?v=2', 'img/icon-512.png?v=2', 'img/icon-180.png?v=2', 'favicon.ico?v=2'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
