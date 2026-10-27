@@ -1059,7 +1059,7 @@ function temporada() {
 const esMovil = window.matchMedia('(pointer:coarse)').matches;
 const enVertical = () => esMovil && window.matchMedia('(orientation:portrait)').matches;
 function pantallaJuego() {
-  if (!esMovil) return;
+  if (!esMovil || standalone || document.fullscreenElement || document.webkitFullscreenElement) return;   // solo una vez: evita el aviso del navegador en cada partida
   const el = document.documentElement;
   try {
     const fs = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen && el.webkitRequestFullscreen();
@@ -1073,7 +1073,6 @@ function startGame() {
   if ($('#sInv').classList.contains('show')) return;
   if (!SES) { abrirLogin('entrar'); return; }
   PARTIDA = null; api('inicio', { token: SES.token }).then(d => { if (d.ok) PARTIDA = d.partida; else if (d.sesion === false) { SES = null; store('ses', null); } });
-  pantallaJuego();
   Audio5.init(); Audio5.click();
   clearInterval(fraseTimer);
   show(null); resetGame(); state = 'count'; Audio5.mode('game');
@@ -1190,7 +1189,7 @@ function compartir(txt) {
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; });
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+const standalone = window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches || navigator.standalone;
 function instalar() {
   Audio5.init(); Audio5.click();
   if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.finally(() => deferredPrompt = null); }
@@ -1236,7 +1235,7 @@ $$('[data-cerrar]').forEach(b => b.onclick = () => { Audio5.click(); if (state =
 $$('.tab').forEach(t => t.onclick = () => { rkTab = t.dataset.tab; $$('.tab').forEach(x => x.classList.toggle('on', x === t)); Audio5.click(); paintRanking(); });
 $('#btnSonido').onclick = () => { Audio5.init(); Audio5.toggleSnd(); paintSnd(); };
 $('#btnMusica').onclick = () => { Audio5.init(); if (!Audio5.snd) Audio5.toggleSnd(); Audio5.toggleMus(); paintSnd(); };
-document.addEventListener('pointerdown', () => Audio5.init(), { once: true });
+document.addEventListener('pointerdown', () => { Audio5.init(); if (!enVertical()) pantallaJuego(); }, { once: true });
 
 
 /* =========================================================
@@ -1400,6 +1399,7 @@ function mostrarItemGanado(item) {
   salaNuevos.add(item.id);
 }
 
+const Y_MIN = .3;   // los objetos no pueden subir por encima de la mitad alta (ahí está la barra superior)
 let salaItems = [], salaNuevos = new Set(), salaCambios = new Map(), salaT = 0, salaZ = 1;
 const salaBox = $('#salaBox'), salaCont = $('#salaItems');
 function abrirSala() {
@@ -1413,7 +1413,10 @@ function abrirSala() {
     salaItems = d.items; pintaSala();
   });
 }
-function cerrarSala() { guardaSala(true); $('#sInv').classList.remove('show'); Audio5.click(); }
+function cerrarSala() {
+  guardaSala(true); $('#sInv').classList.remove('show'); $('#itemInfo').classList.add('oculto'); Audio5.click();
+  if (state === 'over') show('#sFin', true); else if (state === 'pause') show('#sPausa', true); else goMenu();
+}
 function posPorDefecto(i) {   // colocación inicial ordenada sobre el suelo
   const fila = Math.floor(i / 7), col = i % 7;
   return { x: .22 + col * .095 + (fila % 2) * .045, y: Math.min(.97, .74 + fila * .07) };
@@ -1428,7 +1431,8 @@ function pintaSala() {
     return;
   }
   let sinPos = 0;
-  salaItems.forEach(o => { if (o.x == null || o.y == null) { const p = posPorDefecto(sinPos++); o.x = p.x; o.y = p.y; salaCambios.set(o.id, o); } salaZ = Math.max(salaZ, (o.z || 0) + 1); });
+  salaItems.forEach(o => { if (o.y != null && o.y < Y_MIN) { o.y = Y_MIN + .05; salaCambios.set(o.id, o); }
+    if (o.x == null || o.y == null) { const p = posPorDefecto(sinPos++); o.x = p.x; o.y = p.y; salaCambios.set(o.id, o); } salaZ = Math.max(salaZ, (o.z || 0) + 1); });
   salaItems.forEach(o => {
     const it = ITEMS[o.tipo] || { nom: o.tipo, img: 'img/icon-192.png?v=2' };
     const el = document.createElement('div'); el.className = 'item' + (salaNuevos.has(o.id) ? ' nuevo' : ''); el.dataset.id = o.id;
@@ -1455,7 +1459,7 @@ function arrastrable(el, o, it) {
     const dx = e.clientX - ini.px, dy = e.clientY - ini.py;
     if (!ini.movido && Math.hypot(dx, dy) < 6) return;
     if (!ini.movido) { ini.movido = true; el.classList.add('arrastra'); o.z = salaZ++; $('#salaAyuda').style.opacity = 0; }
-    o.x = clamp(ini.x + dx / ini.w, .03, .97); o.y = clamp(ini.y + dy / ini.h, .12, .995);
+    o.x = clamp(ini.x + dx / ini.w, .03, .97); o.y = clamp(ini.y + dy / ini.h, Y_MIN, .995);
     colocaItem(el, o);
   });
   const fin = () => {
