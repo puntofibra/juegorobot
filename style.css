@@ -219,3 +219,6 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
   .btn.jugar{padding:10px;font-size:20px}
   .screen{align-items:flex-start;padding-top:60px}
 }
+.fin .lucasImg.media.caido{height:auto;width:300px;max-width:100%;animation:mareo 2.6s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes mareo{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2.5deg) translateY(2px)}}
+@media (orientation:portrait){.fin .lucasImg.media.caido{width:210px}}

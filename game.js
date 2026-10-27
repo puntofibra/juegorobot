@@ -1081,7 +1081,7 @@ function gameOver() {
   $('#hud').classList.add('oculto');
   const card = $('#sFin .card'); card.classList.toggle('record-new', rec);
   $('#finTit').textContent = rec ? '¡NUEVO RÉCORD!' : pick(['¡BOOM!', 'FIN DE LA PARTIDA', '¡CASI!', 'LUCAS NECESITA REPARACIÓN']);
-  $('#finImg').src = 'img/' + (rec ? 'celebra' : 'duda') + '.webp';
+  $('#finImg').src = 'img/' + (rec ? 'celebra' : 'caido') + '.webp'; $('#finImg').classList.toggle('caido', !rec);
   countUp('#fPts', pts); countUp('#fM', lastResult.m); countUp('#fD', coins); $('#fBest').textContent = best.toLocaleString('es-ES');
   show('#sFin', true);
   if (rec && pts > 0) { Audio5.record(); confetti(); }
