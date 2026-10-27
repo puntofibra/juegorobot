@@ -454,7 +454,7 @@ function update(dt) {
     speed = lerp(speed, target, Math.min(1, dt * (pw.turbo > 0 ? 4 : 1.6)));
   } else if (state === 'dying') speed = lerp(speed, 0, Math.min(1, dt * 1.6));
   camX += speed * dt;
-  if (state === 'play') { meters += speed * dt / 40; playT += dt; if (!premioAvisado && PREMIO && SES && score() >= PREMIO.minimo) { premioAvisado = true; const it = ITEMS[PREMIO.tipo]; showBanner('¡OBJETO DESBLOQUEADO!', (it ? it.nom : PREMIO.tipo).toUpperCase(), '#ff9a2b'); Audio5.record(); flash('#ff9a2b', .25); } }
+  if (state === 'play') { meters += speed * dt / 40; playT += dt; if (!premioAvisado && PREMIO && SES && score() >= PREMIO.minimo && playT >= 60) { premioAvisado = true; const it = ITEMS[PREMIO.tipo]; showBanner('¡OBJETO DESBLOQUEADO!', (it ? it.nom : PREMIO.tipo).toUpperCase(), '#ff9a2b'); Audio5.record(); flash('#ff9a2b', .25); } }
 
   // zonas
   const zn = Math.floor(meters / 800);
@@ -1072,6 +1072,7 @@ function startGame() {
   if (enVertical()) { pantallaJuego(); return; }
   if ($('#sInv').classList.contains('show')) return;
   if (!SES) { abrirLogin('entrar'); return; }
+  PARTIDA = null; api('inicio', { token: SES.token }).then(d => { if (d.ok) PARTIDA = d.partida; else if (d.sesion === false) { SES = null; store('ses', null); } });
   pantallaJuego();
   Audio5.init(); Audio5.click();
   clearInterval(fraseTimer);
@@ -1147,9 +1148,10 @@ function jsonp(params) {
 }
 function enviar() {
   if (!lastResult || lastResult.pts <= 0 || !SES) return;
-  const r = lastResult, f = firma([SES.perfil.usuario, r.pts, r.m, r.d, r.dur].join('|'));
+  if (!PARTIDA) { $('#envio').textContent = 'No se pudo validar la partida (sin conexión al empezar)'; return; }
+  const r = lastResult, partida = PARTIDA, f = firma([SES.perfil.usuario, r.pts, r.m, r.d, r.dur, partida].join('|')); PARTIDA = null;
   $('#envio').textContent = 'Guardando en el ranking…';
-  api('enviar', { token: SES.token, puntos: r.pts, metros: r.m, datos: r.d, dur: r.dur, firma: f })
+  api('enviar', { token: SES.token, puntos: r.pts, metros: r.m, datos: r.d, dur: r.dur, partida, firma: f })
     .then(d => {
       if (d.ok) {
         SES.perfil.partidas++; if (d.nuevoRecord) SES.perfil.record = r.pts; store('ses', SES);
@@ -1296,7 +1298,7 @@ function drawHeroFire(dt, t, o) {
 /* =========================================================
    CUENTAS: registro, acceso, Google y recuperación
    ========================================================= */
-let SES = load('ses', null), trasLogin = null;
+let SES = load('ses', null), trasLogin = null, PARTIDA = null;
 function api(accion, datos) {
   return fetch(CFG.API, { method: 'POST', body: JSON.stringify(Object.assign({ accion }, datos || {})) })
     .then(r => r.json()).catch(() => ({ ok: false, error: 'Sin conexión. Inténtalo otra vez.' }));

@@ -383,3 +383,4 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
 .finItem .btn{width:auto!important;margin:0!important;flex:0 0 auto}
 .premio img{width:28px;vertical-align:middle;margin-right:6px}
 @media (max-height:520px) and (orientation:landscape){.salaAyuda{font-size:12px;padding:5px 12px}.finItem{padding:6px 10px;margin:4px 0 0}.finItem img{width:40px}.finItem b{font-size:14px}}
+.sala:not(.show),.sala:not(.show) *{pointer-events:none!important}
