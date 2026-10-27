@@ -1,6 +1,6 @@
-const CACHE = 'lucas5g-v1';
-const ASSETS = ['./', 'index.html', 'style.css?v=1', 'game.js?v=1', 'manifest.json',
-  'img/vuela.webp', 'img/saluda.webp', 'img/celebra.webp', 'img/duda.webp', 'img/senala.webp', 'img/mando.webp',
+const CACHE = 'lucas5g-v2';
+const ASSETS = ['./', 'index.html', 'style.css?v=2', 'game.js?v=2', 'manifest.json',
+  'img/superlucas.webp', 'img/vuela.webp', 'img/saluda.webp', 'img/celebra.webp', 'img/duda.webp', 'img/senala.webp', 'img/mando.webp',
   'img/switch.webp', 'img/telefono.webp', 'img/portatil.webp', 'img/halloween.webp', 'img/navidad.webp', 'img/piscina.webp',
   'img/icon-192.png', 'img/icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
