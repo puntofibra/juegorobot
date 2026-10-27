@@ -127,7 +127,7 @@ const Audio5 = (() => {
 const cv = $('#cv'), ctx = cv.getContext('2d');
 let DPR = 1, VW = 0, VH = 0, S = 1, W = 1280, H = 720, GROUND = 650, CEIL = 46, PX = 300;
 const IMG = {};
-const IMG_LIST = ['capa', 'superlucas', 'vuela', 'saluda', 'celebra', 'duda', 'senala', 'mando', 'switch', 'telefono', 'portatil', 'halloween', 'navidad', 'piscina'];
+const IMG_LIST = ['altos', 'altos-luz', 'bajos', 'bajos-luz', 'capa', 'superlucas', 'vuela', 'saluda', 'celebra', 'duda', 'senala', 'mando', 'switch', 'telefono', 'portatil', 'halloween', 'navidad', 'piscina'];
 
 function loadImages(cb) {
   let n = 0;
@@ -159,6 +159,36 @@ let skyTop = ZONAS[0].top, skyBot = ZONAS[0].bot, skyFrom = null, skyT = 1;
 const TILE = 1400;
 const LETREROS = ['FUTURMOVIL', '5G', 'FIBRA 1GB', 'PUNTOFIBRA', 'LUCAS', 'WIFI', 'TV+FÚTBOL', 'ONLINE', '24H', 'DATOS'];
 
+
+function artLayer(name, h, z, R) {
+  const im = IMG[name], gl = IMG[name + '-luz'];
+  if (!im || !im.complete || !im.naturalWidth) return null;
+  const w = h * im.naturalWidth / im.naturalHeight, p = ZONAS[z];
+  const c = off(w * R, h * R), g = c.getContext('2d');
+  g.drawImage(im, 0, 0, c.width, c.height);
+  g.globalCompositeOperation = 'source-atop';
+  if (name === 'altos') { g.fillStyle = 'rgba(4,7,16,.28)'; g.fillRect(0, 0, c.width, c.height); }
+  if (z > 0) { g.fillStyle = rgba(p.a, .1); g.fillRect(0, 0, c.width, c.height); }
+  // borde superior iluminado por el color de la zona
+  let lc = null;
+  if (gl && gl.complete && gl.naturalWidth) {
+    lc = off(w * R, h * R); const lg = lc.getContext('2d');
+    lg.drawImage(gl, 0, 0, lc.width, lc.height);
+    if (z > 0) { lg.globalCompositeOperation = 'source-atop'; lg.fillStyle = rgba(p.a, .85); lg.fillRect(0, 0, lc.width, lc.height); }
+  }
+  return { c, lc, w, h };
+}
+function drawArt(Lr, par, t, glowA) {
+  if (!Lr) return;
+  const o = -((camX * par) % Lr.w), y = GROUND - Lr.h;
+  for (let x = o; x < W; x += Lr.w) ctx.drawImage(Lr.c, x, y, Lr.w + 1, Lr.h);
+  if (Lr.lc) {
+    const a0 = ctx.globalAlpha; ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = a0 * glowA * (.8 + .2 * Math.sin(t * 2.2) + Math.random() * .04);
+    for (let x = o; x < W; x += Lr.w) ctx.drawImage(Lr.lc, x, y, Lr.w + 1, Lr.h);
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a0;
+  }
+}
 function buildLayers(z) {
   const p = ZONAS[z], R = S * DPR;
   const L = { z };
@@ -177,46 +207,18 @@ function buildLayers(z) {
   let x = 0;
   while (x < TILE) {
     let w = rnd(50, 120); if (x + w > TILE - 40) w = TILE - x;
-    const h = rnd(H * 0.08, H * 0.32), y = GROUND - h;
-    fg.fillStyle = '#0a0f20'; fg.fillRect(x, y, w - 2, h);
+    const h = rnd(H * 0.1, H * 0.4), y = GROUND - h;
+    fg.fillStyle = '#080c1a'; fg.fillRect(x, y, w - 2, h);
     fg.fillStyle = rgba(p.a, 0.18); fg.fillRect(x, y, w - 2, 1.5);
     for (let wy = y + 8; wy < GROUND - 8; wy += 11) for (let wx = x + 6; wx < x + w - 8; wx += 9)
       if (Math.random() < 0.22) { fg.fillStyle = rgba(Math.random() < .7 ? p.b : p.a, rnd(.1, .4)); fg.fillRect(wx, wy, 4, 5); }
     x += w;
   }
   L.far = fc;
-  // capa media
-  const mc = off(TILE * R, GROUND * R), mg = mc.getContext('2d'); mg.scale(R, R);
-  L.ant = []; x = 0;
-  while (x < TILE) {
-    let w = rnd(70, 160); if (x + w > TILE - 60) w = TILE - x;
-    const h = rnd(H * 0.14, H * 0.46), y = GROUND - h;
-    const bg = mg.createLinearGradient(0, y, 0, GROUND); bg.addColorStop(0, '#0b1222'); bg.addColorStop(1, '#05070e');
-    mg.fillStyle = bg; mg.fillRect(x + 4, y, w - 8, h);
-    mg.fillStyle = rgba(p.a, 0.55); mg.fillRect(x + 4, y, w - 8, 2);
-    mg.fillStyle = rgba(p.a, 0.18); mg.fillRect(x + w - 6, y, 2, h);
-    for (let wy = y + 14; wy < GROUND - 10; wy += 16) for (let wx = x + 12; wx < x + w - 16; wx += 14)
-      if (Math.random() < 0.3) { mg.fillStyle = rgba(Math.random() < .75 ? p.b : '#ffffff', rnd(.15, .55)); mg.fillRect(wx, wy, 7, 8); }
-    if (Math.random() < 0.55 && w > 90) {   // letrero neón
-      const txt = pick(LETREROS), vert = Math.random() < 0.4 && txt.length <= 8;
-      const col = pick([p.a, p.b, '#ff2bd6', '#00e5ff']);
-      mg.save(); mg.font = '900 ' + (vert ? 15 : 17) + 'px Orbitron, sans-serif'; mg.textAlign = 'center'; mg.textBaseline = 'middle';
-      mg.shadowColor = col; mg.shadowBlur = 14; mg.strokeStyle = col; mg.lineWidth = 2; mg.fillStyle = '#fff';
-      if (vert) {
-        const sx = x + w / 2, sy = y + 30, sh = txt.length * 18 + 14;
-        mg.fillStyle = 'rgba(0,0,0,.6)'; mg.fillRect(sx - 15, sy, 30, sh); mg.strokeRect(sx - 15, sy, 30, sh); mg.fillStyle = '#fff';
-        for (let i = 0; i < txt.length; i++) mg.fillText(txt[i], sx, sy + 16 + i * 18);
-      } else {
-        const tw = Math.min(w - 20, mg.measureText(txt).width + 22), sx = x + w / 2, sy = y + 26;
-        mg.fillStyle = 'rgba(0,0,0,.6)'; mg.fillRect(sx - tw / 2, sy - 14, tw, 28); mg.strokeRect(sx - tw / 2, sy - 14, tw, 28);
-        mg.fillStyle = '#fff'; mg.fillText(txt, sx, sy + 1, tw - 10);
-      }
-      mg.restore();
-    }
-    if (Math.random() < 0.5) { const ax = x + rnd(15, w - 15), ah = rnd(18, 50); mg.fillStyle = '#1a2236'; mg.fillRect(ax, y - ah, 2, ah); L.ant.push([ax + 1, y - ah, Math.random() * TAU]); }
-    x += w;
-  }
-  L.mid = mc;
+  // capas de ilustración: altos detrás, bajos delante
+  L.ant = [];
+  L.altos = artLayer('altos', GROUND * 0.6, z, R);
+  L.bajos = artLayer('bajos', GROUND * 0.27, z, R);
   return L;
 }
 
@@ -655,7 +657,12 @@ function drawLayerSet(Ls, a, t) {
   if (!Ls || a <= 0) return;
   ctx.globalAlpha = a;
   const sr = Ls.sunR; ctx.drawImage(Ls.sun, W * .68 - sr * 1.3, GROUND - H * .3 - sr * 1.3, sr * 2.6, sr * 2.6);
-  tile(Ls.far, .08); tile(Ls.mid, .22);
+  tile(Ls.far, .05);
+  drawArt(Ls.altos, .14, t, .55);
+  // neblina entre capas para dar profundidad
+  const hz2 = ctx.createLinearGradient(0, GROUND - GROUND * .3, 0, GROUND); hz2.addColorStop(0, 'rgba(5,8,18,0)'); hz2.addColorStop(1, rgba(ZONAS[Ls.z].a, .10));
+  ctx.fillStyle = hz2; ctx.fillRect(0, GROUND - GROUND * .3, W, GROUND * .3);
+  drawArt(Ls.bajos, .34, t, .8);
   // antenas parpadeantes
   const offM = -((camX * .22) % TILE);
   ctx.globalCompositeOperation = 'lighter';
