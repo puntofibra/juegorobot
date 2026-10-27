@@ -1021,6 +1021,24 @@ function show(id, dim) {
   $$('.screen').forEach(s => s.classList.remove('show', 'dim'));
   if (id) { const s = $(id); s.classList.add('show'); if (dim) s.classList.add('dim'); }
 }
+/* Ventana de confirmación con el estilo del juego (sustituye a confirm()) */
+function confirma(o) {
+  return new Promise(ok => {
+    const m = $('#modal'), si = $('#mSi'), no = $('#mNo');
+    $('#mIco').textContent = o.ico || '?'; $('#mIco').className = 'mIco' + (o.peligro ? ' peligro' : '');
+    $('#mTit').textContent = o.titulo || '¿Seguro?'; $('#mTxt').innerHTML = o.html || '';
+    si.textContent = o.si || 'Aceptar'; no.textContent = o.no || 'Cancelar';
+    si.className = o.peligro ? 'btn peligro' : 'btn jugar peq';
+    m.classList.remove('oculto'); m.classList.remove('sale'); void m.offsetWidth; m.classList.add('entra');
+    try { Audio5.click(); } catch (e) {}
+    const fin = r => { m.classList.add('sale'); setTimeout(() => { m.classList.add('oculto'); m.classList.remove('entra', 'sale'); }, 180); si.onclick = no.onclick = m.onclick = null; document.removeEventListener('keydown', tecla); ok(r); };
+    const tecla = e => { if (e.key === 'Escape') fin(false); else if (e.key === 'Enter') fin(true); };
+    si.onclick = () => fin(true); no.onclick = () => fin(false);
+    m.onclick = e => { if (e.target === m) fin(false); };
+    document.addEventListener('keydown', tecla);
+    setTimeout(() => si.focus(), 50);
+  });
+}
 let toastT;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
 
@@ -1780,8 +1798,9 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
       det.innerHTML = d.items.length ? d.items.map(o => `<div class="it"><img src="${esc(itemDe(o.tipo).img)}" alt=""><code>${esc(o.id)}</code><span>${esc(itemDe(o.tipo).nom)} · ${o.fecha ? new Date(o.fecha).toLocaleDateString('es-ES') : ''} · ${esc(o.origen)}</span><button data-id="${esc(o.id)}">Quitar</button></div>`).join('') : 'Este jugador aún no tiene objetos.';
       det.querySelectorAll('button').forEach(b => b.onclick = ev => {
         ev.stopPropagation();
-        if (!confirm('¿Quitar el objeto ' + b.dataset.id + ' a este jugador?')) return;
-        adm('quitarItem', { id: b.dataset.id }).then(r => { if (r.ok) { toast('Objeto quitado'); recargar(); } else toast(r.error); });
+        confirma({ ico: '🗑', peligro: true, titulo: 'Quitar objeto', html: `¿Quitar el objeto <b>${esc(b.dataset.id)}</b> a este jugador?<br><small>Desaparecerá de su sala.</small>`, si: 'Quitar' }).then(si => {
+          if (si) adm('quitarItem', { id: b.dataset.id }).then(r => { if (r.ok) { toast('Objeto quitado'); recargar(); } else toast(r.error); });
+        });
       });
     });
   }
@@ -1841,8 +1860,8 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
   $$('#tPanel [data-tcerrar]').forEach(b => b.onclick = () => { Audio5.click(); cierraPanel(); });
   $$('#tPanel [data-tcancelar]').forEach(b => b.onclick = () => {
     if (!TR) return cierraPanel();
-    if (TR.estado === 'abierto' && !confirm('¿Cancelar el intercambio con ' + TR.otro + '?')) return;
-    op('cancelar');
+    if (TR.estado !== 'abierto') return op('cancelar');
+    confirma({ ico: '✕', peligro: true, titulo: 'Cancelar intercambio', html: `¿Seguro que quieres cancelar el intercambio con <b>${esc(TR.otro)}</b>?`, si: 'Sí, cancelar', no: 'Seguir' }).then(si => { if (si && TR) op('cancelar'); });
   });
 
   function op(o, datos) {
@@ -1905,9 +1924,14 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
   }
   $('#tAceptar').onclick = () => {
     if (!TR) return;
-    const da = TR.mio.length, recibe = TR.suyo.length;
-    if (!confirm(`¿Aceptar el trato?\n\nDas ${da} objeto${da === 1 ? '' : 's'} y recibes ${recibe} objeto${recibe === 1 ? '' : 's'} de ${TR.otro}.`)) return;
-    Audio5.click(); op('aceptar');
+    const fila = (lista, vacio) => lista.length ? `<div class="mItems">${lista.map(o => { const it = itemDe(o.tipo); return `<span title="${esc(it.nom)} · ${esc(o.id)}"><img src="${esc(it.img)}" alt=""><i>${esc(it.nom)}</i></span>`; }).join('')}</div>` : `<div class="mNada">${vacio}</div>`;
+    const t = TR, regalo = !t.suyo.length && t.mio.length;
+    confirma({ ico: '⇄', titulo: 'Confirmar intercambio', si: 'Aceptar trato', no: 'Revisar',
+      html: `<div class="mTrato"><div><h4>Das <small>(${t.mio.length})</small></h4>${fila(t.mio, 'Nada')}</div>
+        <div class="mFlecha">⇄</div>
+        <div><h4>Recibes de ${esc(t.otro)} <small>(${t.suyo.length})</small></h4>${fila(t.suyo, 'Nada')}</div></div>
+        ${regalo ? '<p class="mAviso">Vas a regalar estos objetos sin recibir nada a cambio.</p>' : ''}` })
+      .then(si => { if (si && TR && TR.id === t.id) op('aceptar'); });
   };
 
   /* ---- final ---- */
