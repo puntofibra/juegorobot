@@ -24,6 +24,7 @@ function manejar_(p) {
   try {
     switch (p.accion) {
       case 'top': return top_();
+      case 'hoy': return hoy_();
       case 'disponible': return { ok: true, disponible: usuarioLibre_(p.usuario) };
       case 'registrar': return registrar_(p);
       case 'entrar': return entrar_(p);
@@ -257,7 +258,7 @@ function enviar_(p) {
     if (puntos > (Number(row[U.Record]) || 0)) { row[U.Record] = puntos; nuevoRecord = true; }
     guardaFila_(s2.sh, s2.i, row);
   });
-  CacheService.getScriptCache().remove('top');
+  CacheService.getScriptCache().removeAll(['top', 'hoy']);
   const t = calcTop_();
   const idx = t.semanaFull.findIndex(r => r.nombre.toLowerCase() === String(usuario).toLowerCase());
   return { ok: true, puesto: idx + 1, nuevoRecord };
@@ -281,5 +282,22 @@ function top_() {
   const t = calcTop_();
   const out = { ok: true, semana: t.semana, total: t.total, sem: t.sem, premio: String(hojaConfig_().getRange('B1').getValue() || '').trim() };
   cache.put('top', JSON.stringify(out), 30);
+  return out;
+}
+
+/* Jugadores distintos que han jugado hoy (hora de Madrid) */
+function hoy_() {
+  const cache = CacheService.getScriptCache(), c = cache.get('hoy'); if (c) return JSON.parse(c);
+  const sh = hojaPuntos_(), n = sh.getLastRow() - 1, hoy = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  const vistos = {}; let partidas = 0;
+  if (n > 0) {
+    const desde = Math.max(0, n - 5000);
+    sh.getRange(2 + desde, 1, n - desde, 8).getValues().forEach(r => {
+      if (!(r[0] instanceof Date) || Utilities.formatDate(r[0], TZ, 'yyyy-MM-dd') !== hoy) return;
+      partidas++; vistos[String(r[7] || r[2]).toLowerCase()] = 1;
+    });
+  }
+  const out = { ok: true, jugadores: Object.keys(vistos).length, partidas };
+  cache.put('hoy', JSON.stringify(out), 60);
   return out;
 }
