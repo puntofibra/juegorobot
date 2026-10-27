@@ -25,6 +25,8 @@ function manejar_(p) {
     switch (p.accion) {
       case 'top': return top_();
       case 'hoy': return hoy_();
+      case 'inventario': return inventario_(p);
+      case 'sala': return guardarSala_(p);
       case 'disponible': return { ok: true, disponible: usuarioLibre_(p.usuario) };
       case 'registrar': return registrar_(p);
       case 'entrar': return entrar_(p);
@@ -251,8 +253,14 @@ function enviar_(p) {
   freno_('env_' + s.row[U.Id], 1, 6);
   const sem = semana_(new Date());
   let nuevoRecord = false;
+  const pr = premioItem_();
+  let item = null;
   conLock_(() => {
     hojaPuntos_().appendRow([new Date(), sem, usuario, puntos, metros, datos, Math.round(seg), s.row[U.Id]]);
+    if (pr.tipo && puntos >= pr.minimo) {
+      item = { id: nuevoIdItem_(), tipo: pr.tipo };
+      hojaItems_().appendRow([item.id, item.tipo, s.row[U.Id], usuario, new Date(), 'Premio ' + sem + ' (' + puntos + ' pts)', '', '', '']);
+    }
     const s2 = porToken_(p.token); const row = s2.row;
     row[U.Partidas] = (Number(row[U.Partidas]) || 0) + 1;
     if (puntos > (Number(row[U.Record]) || 0)) { row[U.Record] = puntos; nuevoRecord = true; }
@@ -261,7 +269,7 @@ function enviar_(p) {
   CacheService.getScriptCache().removeAll(['top', 'hoy']);
   const t = calcTop_();
   const idx = t.semanaFull.findIndex(r => r.nombre.toLowerCase() === String(usuario).toLowerCase());
-  return { ok: true, puesto: idx + 1, nuevoRecord };
+  return { ok: true, puesto: idx + 1, nuevoRecord, item };
 }
 function calcTop_() {
   const sh = hojaPuntos_(), n = sh.getLastRow() - 1;
@@ -280,7 +288,8 @@ function calcTop_() {
 function top_() {
   const cache = CacheService.getScriptCache(), c = cache.get('top'); if (c) return JSON.parse(c);
   const t = calcTop_();
-  const out = { ok: true, semana: t.semana, total: t.total, sem: t.sem, premio: String(hojaConfig_().getRange('B1').getValue() || '').trim() };
+  const pr = premioItem_();
+  const out = { ok: true, semana: t.semana, total: t.total, sem: t.sem, premio: String(hojaConfig_().getRange('B1').getValue() || '').trim(), item: pr.tipo ? pr : null };
   cache.put('top', JSON.stringify(out), 30);
   return out;
 }
@@ -300,4 +309,59 @@ function hoy_() {
   const out = { ok: true, jugadores: Object.keys(vistos).length, partidas };
   cache.put('hoy', JSON.stringify(out), 60);
   return out;
+}
+
+/* ================= ITEMS COLECCIONABLES ================= */
+const CAB_I = ['Id', 'Tipo', 'IdUsuario', 'Usuario', 'Obtenido', 'Origen', 'X', 'Y', 'Z'];
+function hojaItems_() {
+  const sh = hoja_('Items', CAB_I);
+  sh.getRange('A:A').setNumberFormat('@');
+  return sh;
+}
+/* Config: B3 = tipo de item de premio esta semana (vacío = sin item), B4 = puntos mínimos en una partida */
+function premioItem_() {
+  const sh = hojaConfig_();
+  if (!String(sh.getRange('A3').getValue())) {
+    sh.getRange('A3:B4').setValues([['Item de premio', 'calabaza'], ['Puntos mínimos', 5000]]);
+    sh.getRange('A3:A4').setFontWeight('bold');
+    if (!String(sh.getRange('B1').getValue())) sh.getRange('B1').setValue('Calabaza coleccionable por cada partida de más de 5.000 puntos');
+  }
+  const v = sh.getRange('B3:B4').getValues();
+  return { tipo: String(v[0][0] || '').trim().toLowerCase(), minimo: Number(v[1][0]) || 5000 };
+}
+function nuevoIdItem_() {
+  const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let id = 'LB-';
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, Utilities.getUuid() + Date.now());
+  for (let i = 0; i < 10; i++) id += abc[(bytes[i] & 255) % abc.length];
+  return id;
+}
+function inventario_(p) {
+  const s = porToken_(p.token); if (!s) return { ok: false, sesion: false };
+  const sh = hojaItems_(), n = sh.getLastRow() - 1, uid = s.row[U.Id];
+  const items = [];
+  if (n > 0) sh.getRange(2, 1, n, CAB_I.length).getValues().forEach(r => {
+    if (String(r[2]) !== String(uid)) return;
+    items.push({ id: String(r[0]), tipo: String(r[1]), fecha: r[4] instanceof Date ? r[4].getTime() : 0,
+      x: r[6] === '' ? null : Number(r[6]), y: r[7] === '' ? null : Number(r[7]), z: r[8] === '' ? 0 : Number(r[8]) });
+  });
+  return { ok: true, items };
+}
+function guardarSala_(p) {
+  const s = porToken_(p.token); if (!s) return { ok: false, sesion: false };
+  const pos = Array.isArray(p.pos) ? p.pos.slice(0, 500) : [];
+  if (!pos.length) return { ok: true };
+  const uid = String(s.row[U.Id]);
+  return conLock_(() => {
+    const sh = hojaItems_(), n = sh.getLastRow() - 1; if (n <= 0) return { ok: true };
+    const rows = sh.getRange(2, 1, n, CAB_I.length).getValues(), idx = {};
+    rows.forEach((r, i) => idx[String(r[0])] = i);
+    let cambios = 0;
+    pos.forEach(o => {
+      const i = idx[String(o.id)]; if (i == null || String(rows[i][2]) !== uid) return;
+      const x = Math.max(0, Math.min(1, Number(o.x) || 0)), y = Math.max(0, Math.min(1, Number(o.y) || 0)), z = Math.max(0, Math.min(99999, parseInt(o.z, 10) || 0));
+      sh.getRange(i + 2, 7, 1, 3).setValues([[Math.round(x * 10000) / 10000, Math.round(y * 10000) / 10000, z]]); cambios++;
+    });
+    return { ok: true, cambios };
+  });
 }
