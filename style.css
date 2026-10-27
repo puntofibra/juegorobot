@@ -489,3 +489,69 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
 .admQr small{color:#8ab;font-size:13px;min-height:16px}
 body.admQr #girar{display:none!important}
 @media (max-height:520px) and (orientation:landscape){#admQrImg{min-width:0;min-height:0;padding:6px}#admQrImg svg{width:150px;height:150px}}
+
+/* ===== Intercambios ===== */
+.btnTrueque{display:inline-flex;align-items:center;gap:6px;margin-left:auto!important;position:relative}
+.btnTrueque svg{width:18px;height:18px}
+.btnTrueque i{font-style:normal;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--v);color:#02110a;font-size:12px;font-weight:800;display:grid;place-items:center}
+.btnTrueque i.cero{background:rgba(255,255,255,.15);color:#cde}
+.btnTrueque.aviso{animation:latido 1s infinite}
+@keyframes latido{50%{box-shadow:0 0 22px rgba(25,255,106,.7)}}
+.tPanel{position:absolute;inset:0;z-index:8;display:grid;place-items:center;background:rgba(2,4,10,.6);backdrop-filter:blur(3px);padding:10px}
+.tCaja{width:min(860px,100%);max-height:100%;display:flex;flex-direction:column;border-radius:18px;overflow:hidden;
+  background:linear-gradient(160deg,rgba(12,18,34,.97),rgba(5,7,16,.98));border:1px solid rgba(0,229,255,.35);box-shadow:0 0 40px rgba(0,229,255,.15)}
+.tVista{display:none;flex-direction:column;min-height:0;max-height:100%}.tVista.on{display:flex;animation:entra .3s both}
+.tVista header{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;border-bottom:1px solid rgba(0,229,255,.18)}
+.tVista header b{flex:1;font-family:Orbitron;font-size:14px;letter-spacing:.08em;color:#cffaff}
+.tX{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.06);color:#ccd;font-size:16px;flex:0 0 auto}
+.tSub{color:#8ab;font-size:14px;padding:8px 16px 0}
+.tLista{padding:10px 12px 14px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:120px;max-height:60vh;touch-action:pan-y}
+.tJug{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.tJug .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#02110a;background:linear-gradient(135deg,var(--v),var(--c));position:relative;flex:0 0 auto}
+.tJug .av::after{content:"";position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;background:var(--v);border:2px solid #0b1222}
+.tJug b{flex:1;font-size:16px}.tJug small{display:block;color:#7fe9ff;font-size:12px;font-weight:600}
+.tJug .btn{width:auto;margin:0;padding:7px 12px;font-size:14px}
+.tVacio{color:#8ab;text-align:center;padding:24px 10px;font-size:15px}
+.tCentro{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:26px 22px}
+.tCentro b{font-size:19px;color:#fff}.tCentro p{color:#8ab;font-size:14px}.tCentro .btn{width:auto;margin-top:6px}
+.tIco{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-size:28px;color:var(--v);border:2px solid var(--v);box-shadow:0 0 20px rgba(25,255,106,.4)}
+.tIco.err{color:#ff5c7a;border-color:#ff5c7a;box-shadow:0 0 20px rgba(255,92,122,.4)}
+.tSpin{width:46px;height:46px;border-radius:50%;border:3px solid rgba(0,229,255,.2);border-top-color:var(--c);animation:gira 1s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+.tBotones{display:flex;gap:8px}.tBotones .btn{margin:0}
+.tCols{display:flex;gap:12px;padding:10px 14px;min-height:0;flex:1;overflow:hidden}
+.tCol{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
+.tCol.suyo{border-left:1px dashed rgba(0,229,255,.25);padding-left:12px}
+.tCol h4{font-family:Orbitron;font-size:12px;letter-spacing:.08em;color:#7fe9ff;margin-bottom:6px;text-transform:uppercase}
+.tCol h4 small,.tCol h5 small{font-family:Rajdhani;text-transform:none;letter-spacing:0;color:#789;font-weight:500}
+.tCol h5{font-size:13px;color:#9ab;margin:8px 0 4px}
+.tOferta{min-height:74px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;padding:6px;border-radius:12px;background:rgba(25,255,106,.05);border:1px solid rgba(25,255,106,.25);overflow-y:auto;touch-action:pan-y}
+.tCol.suyo .tOferta{flex:1;background:rgba(0,229,255,.05);border-color:rgba(0,229,255,.25)}
+.tOferta:empty::before{content:"Nada";color:#678;font-size:14px;margin:auto}
+.tInv{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;overflow-y:auto;flex:1;min-height:60px;max-height:34vh;touch-action:pan-y}
+.tIt{width:64px;padding:4px 2px;border-radius:10px;text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);cursor:pointer;position:relative}
+.tIt img{width:44px;height:44px;object-fit:contain;display:block;margin:0 auto;pointer-events:none}
+.tIt span{display:block;font-size:10px;color:#9ab;line-height:1.1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tOferta.grande .tIt{width:84px}.tOferta.grande .tIt img{width:60px;height:60px}
+.tInv .tIt.sel{opacity:.35}
+.tInv .tIt.sel::after{content:"✓";position:absolute;top:2px;right:4px;color:var(--v);font-weight:800}
+.tVista footer{display:flex;align-items:center;gap:8px;padding:8px 14px 10px;border-top:1px solid rgba(0,229,255,.18)}
+.tVista footer .btn{width:auto!important;margin:0!important;padding:10px 16px;font-size:16px}
+.tEst{flex:1;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;font-size:14px;color:#9ab;min-width:0}
+.tEst span.ok{color:var(--v);font-weight:700}
+.tEst em{flex-basis:100%;font-style:normal;color:#ffd23f;font-size:13px;min-height:16px}
+.tAviso{position:fixed;z-index:60;top:calc(10px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;
+  padding:8px 10px 8px 12px;border-radius:16px;background:rgba(8,14,28,.95);border:1px solid rgba(25,255,106,.5);box-shadow:0 0 26px rgba(25,255,106,.3);animation:entra .35s both;max-width:calc(100% - 24px)}
+.tAviso .tIco{width:36px;height:36px;font-size:18px;flex:0 0 auto}
+.tAviso b{display:block;font-size:15px;color:#fff}.tAviso small{display:block;color:#8ab;font-size:12px}
+.tAviso .btn{width:auto;margin:0}
+@media (max-height:520px) and (orientation:landscape){
+  .tPanel{padding:6px}
+  .tVista header{padding:6px 8px 6px 12px}.tVista header b{font-size:12px}.tX{width:30px;height:30px}
+  .tCols{padding:6px 10px;gap:10px}.tCol h4{font-size:11px;margin-bottom:4px}.tCol h5{margin:4px 0 2px}
+  .tOferta{min-height:58px}.tIt{width:54px}.tIt img{width:36px;height:36px}.tOferta.grande .tIt{width:66px}.tOferta.grande .tIt img{width:46px;height:46px}
+  .tInv{max-height:30vh}
+  .tVista footer{padding:6px 10px}.tVista footer .btn{padding:8px 12px;font-size:14px}
+  .tCentro{padding:16px}.tLista{max-height:62vh}
+}
+@media (orientation:portrait){.tCols{flex-direction:column;overflow-y:auto}.tCol.suyo{border-left:0;padding-left:0;border-top:1px dashed rgba(0,229,255,.25);padding-top:8px}}

@@ -1796,3 +1796,150 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
     });
   };
 })();
+
+/* =========================================================
+   JUGADORES CONECTADOS E INTERCAMBIO DE OBJETOS
+   ========================================================= */
+(() => {
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const itemDe = t => ITEMS[t] || { nom: t, img: 'img/icon-192.png?v=2' };
+  const salaAbierta = () => $('#sInv').classList.contains('show');
+  let ONLINE = [], TR = null, pingT = 0, verT = 0, ofertaT = 0, miOferta = new Set(), vistoFin = '', avisoCerrado = '';
+
+  /* ---- ping: conectados + trato pendiente ---- */
+  function ping() {
+    clearTimeout(pingT);
+    const sig = salaAbierta() ? 4000 : 20000;
+    if (!SES || !CFG.API || document.visibilityState !== 'visible') { pingT = setTimeout(ping, sig); return; }
+    api('ping', { token: SES.token, sala: salaAbierta() }).then(d => {
+      if (d.ok) { ONLINE = d.online || []; pintaOnline(); recibe(d.trato); }
+      pingT = setTimeout(ping, salaAbierta() ? 4000 : 20000);
+    });
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ping(); });
+  setTimeout(ping, 2500);
+
+  function pintaOnline() {
+    const n = ONLINE.length, c = $('#onCnt'); c.textContent = n; c.classList.toggle('cero', !n);
+    if (vistaAct() === 'lista') pintaLista();
+  }
+  function pintaLista() {
+    $('#tLista').innerHTML = ONLINE.length ? ONLINE.map(j => `<div class="tJug"><span class="av">${esc(j.usuario[0].toUpperCase())}</span><b>${esc(j.usuario)}<small>${j.sala ? 'En su sala ahora' : 'Conectado'}</small></b><button class="btn sec" data-inv="${esc(j.usuario)}">Intercambiar</button></div>`).join('')
+      : '<div class="tVacio">Ahora mismo no hay nadie más conectado.<br>Cuando entre alguien aparecerá aquí.</div>';
+    $$('#tLista [data-inv]').forEach(b => b.onclick = () => invitar(b.dataset.inv, b));
+  }
+
+  /* ---- panel ---- */
+  function vista(v) { $('#tPanel').classList.remove('oculto'); $$('#tPanel .tVista').forEach(x => x.classList.toggle('on', x.dataset.v === v)); }
+  function vistaAct() { if ($('#tPanel').classList.contains('oculto')) return ''; const v = $('#tPanel .tVista.on'); return v ? v.dataset.v : ''; }
+  function cierraPanel() { $('#tPanel').classList.add('oculto'); clearInterval(verT); verT = 0; }
+  $('#btnTrueque').onclick = () => {
+    Audio5.click(); $('#btnTrueque').classList.remove('aviso');
+    if (TR && (TR.estado === 'invitado' || TR.estado === 'abierto')) return muestraTrato(TR);
+    vista('lista'); pintaLista(); ping();
+  };
+  $$('#tPanel [data-tcerrar]').forEach(b => b.onclick = () => { Audio5.click(); cierraPanel(); });
+  $$('#tPanel [data-tcancelar]').forEach(b => b.onclick = () => {
+    if (!TR) return cierraPanel();
+    if (TR.estado === 'abierto' && !confirm('¿Cancelar el intercambio con ' + TR.otro + '?')) return;
+    op('cancelar');
+  });
+
+  function op(o, datos) {
+    if (!TR) return Promise.resolve();
+    return api('trato', Object.assign({ token: SES.token, op: o, id: TR.id }, datos || {})).then(d => { if (d.ok) recibe(d.trato, true); else toast(d.error || 'Error'); return d; });
+  }
+  function invitar(usuario, b) {
+    b.disabled = true; b.textContent = '…';
+    api('trato', { token: SES.token, op: 'invitar', a: usuario }).then(d => {
+      b.disabled = false; b.textContent = 'Intercambiar';
+      if (!d.ok) return toast(d.error || 'No se pudo invitar');
+      Audio5.click(); recibe(d.trato, true);
+    });
+  }
+
+  /* ---- llega el estado del trato (por ping o por una acción) ---- */
+  function recibe(t, directo) {
+    if (!t) { if (TR && (TR.estado === 'invitado' || TR.estado === 'abierto') && !directo) { /* desapareció: caducó */ fin({ estado: 'caducado', otro: TR.otro, msg: '' }); } return; }
+    const antes = TR; TR = t;
+    if (t.estado === 'invitado' || t.estado === 'abierto') {
+      if (t.estado === 'abierto' && (!antes || antes.id !== t.id || antes.estado !== 'abierto')) miOferta = new Set(t.mio.map(o => o.id));
+      if (salaAbierta()) {
+        $('#tAviso').classList.add('oculto');
+        const v = vistaAct();
+        if (t.estado === 'abierto' || v === 'espera' || v === 'invita' || directo || !t.invitaYo) muestraTrato(t);
+      } else if (state !== 'play' && avisoCerrado !== t.id + t.estado) aviso(t);
+      if (!verT && salaAbierta() && vistaAct() && vistaAct() !== 'lista') verT = setInterval(() => op('ver'), 2000);
+    } else if (vistoFin !== t.id) fin(t);
+  }
+  function muestraTrato(t) {
+    $$('#tPanel .tOtro').forEach(e => e.textContent = t.otro);
+    if (t.estado === 'invitado') { vista(t.invitaYo ? 'espera' : 'invita'); }
+    else { vista('trato'); pintaTrato(t); }
+    if (!verT) verT = setInterval(() => op('ver'), 2000);
+  }
+  $('#tSi').onclick = () => { Audio5.click(); op('responder', { si: true }); };
+  $('#tNo').onclick = () => { Audio5.click(); op('responder', { si: false }); };
+
+  function tarjeta(o, extra) { const it = itemDe(o.tipo); return `<div class="tIt ${extra || ''}" data-id="${esc(o.id)}" title="${esc(it.nom)} · ${esc(o.id)}"><img src="${esc(it.img)}" alt=""><span>${esc(it.nom)}</span></div>`; }
+  function pintaTrato(t) {
+    const mio = salaItems.filter(o => miOferta.has(o.id));
+    $('#tMio').innerHTML = mio.map(o => tarjeta(o)).join(''); $('#tMioN').textContent = mio.length ? `(${mio.length})` : '';
+    $('#tSuyo').innerHTML = t.suyo.map(o => tarjeta(o)).join(''); $('#tSuyoN').textContent = t.suyo.length ? `(${t.suyo.length})` : '';
+    $('#tInv').innerHTML = salaItems.length ? salaItems.map(o => tarjeta(o, miOferta.has(o.id) ? 'sel' : '')).join('') : '<div class="tVacio">No tienes objetos todavía</div>';
+    $$('#tInv .tIt, #tMio .tIt').forEach(el => el.onclick = () => cambiaOferta(el.dataset.id));
+    const yo = $('#tOkYo'), otro = $('#tOkOtro');
+    yo.textContent = t.okYo ? 'Tú: ✓ aceptado' : 'Tú: sin aceptar'; yo.className = t.okYo ? 'ok' : '';
+    otro.textContent = t.okOtro ? `${t.otro}: ✓ aceptado` : `${t.otro}: sin aceptar`; otro.className = t.okOtro ? 'ok' : '';
+    $('#tMsg').textContent = t.msg && !/^(¡|Intercambio)/.test(t.msg) ? t.msg : '';
+    const b = $('#tAceptar'), vacio = !t.mio.length && !t.suyo.length, pendiente = !!ofertaT;
+    b.disabled = t.okYo || vacio || pendiente;
+    b.textContent = t.okYo ? (t.okOtro ? 'Cerrando…' : 'Esperando…') : 'Aceptar trato';
+  }
+  function cambiaOferta(id) {
+    if (!TR || TR.estado !== 'abierto') return;
+    miOferta.has(id) ? miOferta.delete(id) : miOferta.add(id); Audio5.click();
+    TR.okYo = false; TR.okOtro = false;
+    clearTimeout(ofertaT); ofertaT = setTimeout(() => { ofertaT = 0; op('ofrecer', { items: [...miOferta] }); }, 600);
+    pintaTrato(TR);
+  }
+  $('#tAceptar').onclick = () => {
+    if (!TR) return;
+    const da = TR.mio.length, recibe = TR.suyo.length;
+    if (!confirm(`¿Aceptar el trato?\n\nDas ${da} objeto${da === 1 ? '' : 's'} y recibes ${recibe} objeto${recibe === 1 ? '' : 's'} de ${TR.otro}.`)) return;
+    Audio5.click(); op('aceptar');
+  };
+
+  /* ---- final ---- */
+  function fin(t) {
+    vistoFin = t.id; clearInterval(verT); verT = 0; $('#tAviso').classList.add('oculto');
+    const prev = TR; TR = null; miOferta = new Set();
+    if (t.id) api('trato', { token: SES.token, op: 'ver', id: t.id });   // marca como visto
+    const ok = t.estado === 'hecho';
+    const tit = ok ? '¡Intercambio realizado!' : t.estado === 'rechazado' ? 'Intercambio rechazado' : t.estado === 'caducado' ? 'El intercambio ha caducado' : t.estado === 'error' ? 'No se pudo hacer el intercambio' : 'Intercambio cancelado';
+    const txt = ok ? `Ya tienes en tu sala lo que te ha dado ${t.otro}.` : (t.msg || '');
+    if (ok) { confetti(); Audio5.record(); vib([30, 30, 120]); }
+    if (salaAbierta()) {
+      $('#tFinIco').textContent = ok ? '✓' : '✕'; $('#tFinIco').classList.toggle('err', !ok);
+      $('#tFinTit').textContent = tit; $('#tFinTxt').textContent = txt; vista('fin');
+      if (ok) api('inventario', { token: SES.token }).then(d => { if (d.ok) { aplicaCatalogo(d.catalogo); const antes = new Set(salaItems.map(o => o.id)); salaItems = d.items; salaItems.forEach(o => { if (!antes.has(o.id)) salaNuevos.add(o.id); }); pintaSala(); } });
+    } else if (state !== 'play' && (ok || prev)) toast(tit);
+  }
+
+  /* ---- aviso fuera de la sala ---- */
+  function aviso(t) {
+    $('#tAvisoTit').textContent = t.estado === 'invitado' ? (t.invitaYo ? `Esperando a ${t.otro}…` : `${t.otro} quiere intercambiar contigo`) : `Intercambio abierto con ${t.otro}`;
+    $('#tAvisoTxt').textContent = t.estado === 'invitado' && !t.invitaYo ? 'Abre tu inventario para ver el trato' : 'Está en tu inventario';
+    $('#tAviso').classList.remove('oculto'); if (!t.invitaYo) { Audio5.click(); vib(40); }
+  }
+  $('#tAvisoVer').onclick = () => { $('#tAviso').classList.add('oculto'); if (state === 'play') return; show(null); abrirSala(); setTimeout(() => TR && muestraTrato(TR), 300); };
+  $('#tAvisoNo').onclick = () => { $('#tAviso').classList.add('oculto'); if (TR) avisoCerrado = TR.id + TR.estado; };
+
+  // al abrir la sala: ping rápido y, si hay trato en marcha, mostrarlo
+  const abrirOrig = abrirSala;
+  abrirSala = function () { abrirOrig(); setTimeout(ping, 400); if (TR && (TR.estado === 'invitado' || TR.estado === 'abierto')) { $('#btnTrueque').classList.add('aviso'); setTimeout(() => TR && muestraTrato(TR), 900); } };
+  $('#btnInventario').onclick = abrirSala;
+  const cerrarOrig = cerrarSala;
+  cerrarSala = function () { cierraPanel(); cerrarOrig(); };
+  $('#btnSalaVolver').onclick = cerrarSala;
+})();

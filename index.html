@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=19">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -158,11 +158,53 @@
     <button class="btn sec mini" id="btnSalaVolver">← Volver</button>
     <div class="salaTit"><small>SALA DE</small><b id="salaNom">—</b></div>
     <div class="salaCnt"><b id="salaCnt">0</b><small>objetos</small></div>
+    <button class="btn sec mini btnTrueque" id="btnTrueque"><svg viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Intercambiar<i id="onCnt">0</i></button>
+  </div>
+  <div class="tPanel oculto" id="tPanel">
+    <div class="tCaja">
+      <div class="tVista" data-v="lista">
+        <header><b>Jugadores conectados</b><button class="tX" data-tcerrar>✕</button></header>
+        <p class="tSub">Elige con quién quieres intercambiar objetos</p>
+        <div class="tLista" id="tLista"></div>
+      </div>
+      <div class="tVista" data-v="espera">
+        <div class="tCentro"><div class="tSpin"></div><b>Esperando a <span class="tOtro"></span>…</b><p>Le ha llegado tu invitación para intercambiar</p><button class="btn ter" data-tcancelar>Cancelar invitación</button></div>
+      </div>
+      <div class="tVista" data-v="invita">
+        <div class="tCentro"><div class="tIco">⇄</div><b><span class="tOtro"></span> quiere intercambiar contigo</b><p>Podréis ver lo que ofrece cada uno antes de aceptar</p>
+          <div class="tBotones"><button class="btn jugar peq" id="tSi">Ver trato</button><button class="btn ter" id="tNo">Rechazar</button></div></div>
+      </div>
+      <div class="tVista" data-v="trato">
+        <header><b>Intercambio con <span class="tOtro"></span></b><button class="tX" data-tcancelar>✕</button></header>
+        <div class="tCols">
+          <div class="tCol">
+            <h4>Tú ofreces <small id="tMioN"></small></h4>
+            <div class="tOferta" id="tMio"></div>
+            <h5>Tus objetos <small>(toca para añadir o quitar)</small></h5>
+            <div class="tInv" id="tInv"></div>
+          </div>
+          <div class="tCol suyo">
+            <h4><span class="tOtro"></span> ofrece <small id="tSuyoN"></small></h4>
+            <div class="tOferta grande" id="tSuyo"></div>
+          </div>
+        </div>
+        <footer>
+          <div class="tEst"><span id="tOkYo">Tú: sin aceptar</span><span id="tOkOtro">—</span><em id="tMsg"></em></div>
+          <button class="btn ter" data-tcancelar>Cancelar</button>
+          <button class="btn jugar peq" id="tAceptar">Aceptar trato</button>
+        </footer>
+      </div>
+      <div class="tVista" data-v="fin">
+        <div class="tCentro"><div class="tIco" id="tFinIco">✓</div><b id="tFinTit"></b><p id="tFinTxt"></p><button class="btn sec" data-tcerrar>Cerrar</button></div>
+      </div>
+    </div>
   </div>
   <div class="salaAyuda" id="salaAyuda">Arrastra tus objetos para colocarlos donde quieras</div>
   <div class="salaEstado" id="salaEstado"></div>
   <div class="itemInfo oculto" id="itemInfo"><img alt=""><div><b></b><code></code><small></small></div></div>
 </section>
+
+<div class="tAviso oculto" id="tAviso"><span class="tIco">⇄</span><div><b id="tAvisoTit"></b><small id="tAvisoTxt"></small></div><button class="btn jugar mini" id="tAvisoVer">Ver</button><button class="tX" id="tAvisoNo">✕</button></div>
 
 <!-- Acceso -->
 <!-- Administración (10 toques a Lucas en el menú) -->
@@ -311,6 +353,6 @@
 </div>
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="game.js?v=24"></script>
+<script src="game.js?v=25"></script>
 </body>
 </html>
