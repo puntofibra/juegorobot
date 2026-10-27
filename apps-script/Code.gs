@@ -5,7 +5,7 @@
 const SHEET_ID = '1S4MBKmxWGxOZBQxus7gwg0xix9CooDOwu_rY35NG_6s';
 const TZ = 'Europe/Madrid';
 const SAL = 'lucas5g-fm';
-const GOOGLE_CLIENT_ID = '';   // ID de cliente OAuth (web) para "Entrar con Google"
+const GOOGLE_CLIENT_ID = '454055120059-nuhaop4r62urc3u036cc3grpqo71ulg7.apps.googleusercontent.com';   // ID de cliente OAuth (web) para "Entrar con Google"
 const CAB_P = ['Fecha', 'Semana', 'Usuario', 'Puntos', 'Metros', 'Datos', 'Segundos', 'IdUsuario'];
 const CAB_U = ['Id', 'Usuario', 'Email', 'Hash', 'Sal', 'Creado', 'UltimoAcceso', 'Google', 'Record', 'Partidas', 'Token', 'TokenExpira', 'CodigoRec', 'CodigoExpira'];
 const U = {}; CAB_U.forEach((k, i) => U[k] = i);
