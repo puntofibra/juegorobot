@@ -1,5 +1,5 @@
-const CACHE = 'lucas5g-v11';
-const ASSETS = ['./', 'index.html', 'style.css?v=6', 'game.js?v=11', 'manifest.json',
+const CACHE = 'lucas5g-v12';
+const ASSETS = ['./', 'index.html', 'style.css?v=7', 'game.js?v=12', 'manifest.json',
   'img/logo.webp', 'img/caido.webp', 'img/luna.webp', 'img/altos.webp', 'img/altos-luz.webp', 'img/bajos.webp', 'img/bajos-luz.webp', 'img/capa.webp', 'img/superlucas.webp', 'img/vuela.webp', 'img/saluda.webp', 'img/celebra.webp', 'img/duda.webp', 'img/senala.webp', 'img/mando.webp',
   'img/switch.webp', 'img/telefono.webp', 'img/portatil.webp', 'img/halloween.webp', 'img/navidad.webp', 'img/piscina.webp',
   'img/icon-192.png', 'img/icon-512.png'];

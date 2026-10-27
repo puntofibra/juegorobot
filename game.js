@@ -281,7 +281,7 @@ function resize() {
   VW = window.innerWidth; VH = window.innerHeight;
   cv.width = Math.round(VW * DPR); cv.height = Math.round(VH * DPR);
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-  S = Math.min(VH / 720, VW / 520); W = VW / S; H = VH / S;
+  S = VH < 500 && VW > VH ? VH / 600 : Math.min(VH / 720, VW / 520); W = VW / S; H = VH / S;   // móvil en horizontal: más zoom
   GROUND = H - Math.min(80, H * 0.1); CEIL = 46; PX = clamp(W * (W < 700 ? 0.27 : 0.24), 125, 340);
   layers = buildLayers(zona); prevLayers = null; layerFade = 1; makeStars();
 }
@@ -1055,7 +1055,22 @@ function temporada() {
 }
 
 /* ---- partida ---- */
+/* ---- móvil: pantalla completa y horizontal ---- */
+const esMovil = window.matchMedia('(pointer:coarse)').matches;
+const enVertical = () => esMovil && window.matchMedia('(orientation:portrait)').matches;
+function pantallaJuego() {
+  if (!esMovil) return;
+  const el = document.documentElement;
+  try {
+    const fs = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen && el.webkitRequestFullscreen();
+    Promise.resolve(fs).then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape')).catch(() => {});
+  } catch (e) {}
+}
+window.addEventListener('orientationchange', () => setTimeout(resize, 250));
+window.matchMedia('(orientation:portrait)').addEventListener && window.matchMedia('(orientation:portrait)').addEventListener('change', () => { if (enVertical()) pause(); setTimeout(resize, 250); });
 function startGame() {
+  if (enVertical()) { pantallaJuego(); return; }
+  pantallaJuego();
   Audio5.init(); Audio5.click();
   const n = $('#nombre').value.trim().slice(0, 16); if (n) store('nombre', n);
   clearInterval(fraseTimer);

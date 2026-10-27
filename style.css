@@ -211,13 +211,38 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
   .stats{grid-template-columns:repeat(2,1fr)}
   .screen{align-items:flex-start}
 }
+/* Móvil en horizontal: todo cabe en pantalla, como un videojuego */
 @media (max-height:520px) and (orientation:landscape){
-  .lucasImg.grande{height:56vh}
-  .heroLucas{padding-bottom:18vh}
-  .panel{gap:7px}
-  .titulo b{font-size:30px}.logo{font-size:30px}
-  .btn.jugar{padding:10px;font-size:20px}
-  .screen{align-items:flex-start;padding-top:60px}
+  .screen{align-items:center;padding:8px max(16px,env(safe-area-inset-right)) 8px max(16px,env(safe-area-inset-left));overflow:hidden}
+  .menu{gap:2vw;height:100%;align-items:center}
+  .hero{height:100%;justify-content:center}
+  .lucasImg.grande{height:52vh}
+  .heroLucas{padding-bottom:20vh}
+  .bocadillo{font-size:13px;padding:5px 10px;max-width:150px;top:0;right:-14%}
+  .panel{gap:1.6vh;padding:2vh 14px;width:min(380px,48vw)}
+  .logoWrap{width:min(100%,300px);margin-bottom:0}
+  .titulo span{font-size:10px}
+  .titulo b{font-size:clamp(20px,6vh,30px)}
+  .record{font-size:11px}
+  input{padding:1.6vh 10px;font-size:15px}
+  .btn{padding:1.7vh 10px;font-size:14px;border-radius:11px}
+  .btn.jugar{padding:2vh;font-size:clamp(16px,5vh,22px)}
+  .fila{gap:8px}
+  .card{padding:3vh 18px;max-height:94vh;overflow:hidden}
+  .card.ancha{gap:16px;max-width:min(760px,94vw)}
+  h2{font-size:18px;margin:0 0 2vh}
+  .fin h2{font-size:20px}
+  .fin .lucasImg.media{height:42vh}
+  .fin .lucasImg.media.caido{width:min(34vw,260px)}
+  .stats{margin-bottom:1vh}.stats b{font-size:16px}.stats div{padding:1vh 4px}
+  .lucasImg.lado{height:52vh}.lucasImg.media{height:32vh}
+  .ayuda{font-size:14px;gap:6px}.pws{margin:8px 0 2px}.pws div{font-size:12px;padding:3px}.pws img{width:26px;height:26px}
+  .rkLista{max-height:42vh}.rkLista li{font-size:14px;padding:5px 8px}
+  .tabs{margin-bottom:6px}.tab{padding:6px}
+  .card .btn{margin-top:1.2vh}
+  .txt{font-size:15px;margin-bottom:8px}
+  #hud .hudPts{font-size:30px}
+  .ico{width:38px;height:38px}
 }
 .fin .lucasImg.media.caido{height:auto;width:300px;max-width:100%;animation:mareo 2.6s ease-in-out infinite;transform-origin:50% 90%}
 @keyframes mareo{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2.5deg) translateY(2px)}}
@@ -237,3 +262,18 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
 @keyframes flickAzul{0%,40%,42%,44%,100%{opacity:1}41%,43%{opacity:.6}}
 @keyframes barridoLogo{0%,55%{background-position:150% 0}100%{background-position:-60% 0}}
 @keyframes logoIn{from{opacity:0;transform:scale(.6);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
+
+/* Aviso de girar el móvil (solo en pantallas táctiles en vertical) */
+#girar{position:fixed;inset:0;z-index:100;display:none;place-items:center;text-align:center;
+  background:radial-gradient(circle at 50% 40%,#0b1a2a,#03050c 70%);color:#e9fff1;padding:24px}
+@media (orientation:portrait) and (pointer:coarse){ #girar{display:grid} }
+.girarBox{display:flex;flex-direction:column;align-items:center;gap:14px}
+.girarBox b{font-family:Orbitron;font-weight:900;font-size:24px;letter-spacing:.08em;text-shadow:0 0 12px var(--c)}
+.girarBox span{font-size:17px;color:#9cd}
+.movilAnim{position:relative;width:170px;height:170px;display:grid;place-items:center}
+.movilIco{width:84px;height:150px;border-radius:16px;border:3px solid var(--c);box-shadow:0 0 18px rgba(0,229,255,.6),inset 0 0 14px rgba(0,229,255,.25);
+  display:grid;place-items:center;animation:giraMovil 2.4s cubic-bezier(.6,0,.3,1) infinite;background:rgba(0,20,30,.5)}
+.movilIco img{width:58px;transform:rotate(0)}
+.flecha{position:absolute;top:-6px;right:-6px;width:56px;height:56px;stroke:var(--v);filter:drop-shadow(0 0 6px var(--v));animation:flechaPulse 2.4s infinite}
+@keyframes giraMovil{0%,20%{transform:rotate(0)}55%,85%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+@keyframes flechaPulse{0%,20%{opacity:1}55%,100%{opacity:.25}}
