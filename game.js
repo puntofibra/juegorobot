@@ -127,7 +127,7 @@ const Audio5 = (() => {
 const cv = $('#cv'), ctx = cv.getContext('2d');
 let DPR = 1, VW = 0, VH = 0, S = 1, W = 1280, H = 720, GROUND = 650, CEIL = 46, PX = 300;
 const IMG = {};
-const IMG_LIST = ['altos', 'altos-luz', 'bajos', 'bajos-luz', 'capa', 'superlucas', 'vuela', 'saluda', 'celebra', 'duda', 'senala', 'mando', 'switch', 'telefono', 'portatil', 'halloween', 'navidad', 'piscina'];
+const IMG_LIST = ['luna', 'altos', 'altos-luz', 'bajos', 'bajos-luz', 'capa', 'superlucas', 'vuela', 'saluda', 'celebra', 'duda', 'senala', 'mando', 'switch', 'telefono', 'portatil', 'halloween', 'navidad', 'piscina'];
 
 function loadImages(cb) {
   let n = 0;
@@ -632,6 +632,7 @@ function render() {
   // estrellas
   for (const s of stars) { const a = .35 + .35 * Math.sin(t * 2 + s.t); ctx.fillStyle = `rgba(255,255,255,${a})`; const x = ((s.x - camX * .02) % W + W) % W; ctx.fillRect(x, s.y, s.s, s.s); }
   // sol
+  drawMoon(t);
   drawLayerSet(prevLayers, 1 - layerFade, t); drawLayerSet(layers, prevLayers ? layerFade : 1, t);
 
   // neblina en el horizonte
@@ -653,10 +654,44 @@ function render() {
   if (flashA > 0) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = flashA; ctx.fillStyle = flashCol; ctx.fillRect(0, 0, cv.width, cv.height); ctx.globalAlpha = 1; flashA = Math.max(0, flashA - .05); }
 }
 
+
+/* ---- luna giratoria ---- */
+let moonC = null, moonG = null, moonX = null;
+function drawMoon(t) {
+  const im = IMG.luna; if (!im || !im.complete || !im.naturalWidth) return;
+  const mr = Math.min(H * .15, GROUND * .19, 140);          // radio de la esfera
+  const size = mr / 0.455;                                   // tamaño total de la imagen (incluye satélites)
+  const portrait = W < 700;
+  const tx = (state === 'menu' || state === 'load') ? (portrait ? W * .78 : W * .1 + mr) : W * .72;
+  moonX = moonX == null ? tx : lerp(moonX, tx, .03);
+  const cx = moonX, cy = Math.max(CEIL + mr + 50, GROUND - GROUND * .7);
+  const R = S * DPR, px = Math.ceil(size * R), c0 = px / 2, rr = mr * R;
+  if (!moonC || moonC.width !== px) { moonC = off(px, px); moonG = moonC.getContext('2d'); }
+  const g = moonG;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, px, px);
+  g.translate(c0, c0); g.rotate(t * 0.11); g.drawImage(im, -c0, -c0, px, px); g.setTransform(1, 0, 0, 1, 0, 0);
+  // sombreado fijo (la luz no gira, la luna sí) => sensación de esfera
+  g.globalCompositeOperation = 'source-atop';
+  const sh = g.createRadialGradient(c0 - rr * .45, c0 - rr * .5, rr * .1, c0, c0, rr * 1.12);
+  sh.addColorStop(0, 'rgba(255,255,255,.12)'); sh.addColorStop(.5, 'rgba(10,20,40,.05)'); sh.addColorStop(.82, 'rgba(5,10,25,.45)'); sh.addColorStop(1, 'rgba(3,6,15,.75)');
+  g.fillStyle = sh; g.beginPath(); g.arc(c0, c0, rr * 1.03, 0, TAU); g.fill();
+  g.fillStyle = 'rgba(8,14,32,.2)'; g.fillRect(0, 0, px, px);
+  if (zona > 0) { g.fillStyle = rgba(ZONAS[zona].a, .09); g.fillRect(0, 0, px, px); }
+  g.globalCompositeOperation = 'source-over';
+  const z = ZONAS[zona], pul = 1 + Math.sin(t * 1.4) * .05;
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .28;
+  ctx.drawImage(glowSpr(z.a), cx - mr * 2.3 * pul, cy - mr * 2.3 * pul, mr * 4.6 * pul, mr * 4.6 * pul);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(moonC, cx - size / 2, cy - size / 2, size, size);
+  // borde iluminado
+  ctx.globalCompositeOperation = 'lighter';
+  const rim = ctx.createLinearGradient(cx - mr, cy - mr, cx + mr, cy + mr); rim.addColorStop(0, rgba(z.a, 0)); rim.addColorStop(.6, rgba(z.a, .15)); rim.addColorStop(1, rgba(z.a, .6));
+  ctx.strokeStyle = rim; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(cx, cy, mr * 1.005, 0, TAU); ctx.stroke();
+  ctx.globalCompositeOperation = 'source-over';
+}
 function drawLayerSet(Ls, a, t) {
   if (!Ls || a <= 0) return;
   ctx.globalAlpha = a;
-  const sr = Ls.sunR; ctx.drawImage(Ls.sun, W * .68 - sr * 1.3, GROUND - H * .3 - sr * 1.3, sr * 2.6, sr * 2.6);
   tile(Ls.far, .05);
   drawArt(Ls.altos, .14, t, .55);
   // neblina entre capas para dar profundidad
