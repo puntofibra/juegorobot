@@ -378,7 +378,7 @@ function spawnChunk() {
 
 /* ---------- partida ---------- */
 function resetGame() {
-  camX = 0; speed = 0; meters = 0; coins = 0; bonus = 0; combo = 0; comboT = 0; playT = 0; premioAvisado = false; $('#finItem').classList.add('oculto');
+  camX = 0; speed = 0; meters = 0; coins = 0; bonus = 0; combo = 0; comboT = 0; playT = 0; premioAvisado = false; $('#finItem').classList.add('oculto'); document.querySelectorAll('.finExtra').forEach(e => e.remove());
   timeScale = 1; hitStop = 0; shake = 0; holding = false;
   coinsArr = []; lasers = []; viruses = []; missiles = []; powers = []; parts = []; texts = []; warns = [];
   Object.assign(pw, { escudo: false, iman: 0, turbo: 0, x2: 0, invul: 0 });
@@ -1155,7 +1155,7 @@ function enviar() {
       if (d.ok) {
         SES.perfil.partidas++; if (d.nuevoRecord) SES.perfil.record = r.pts; store('ses', SES);
         $('#envio').innerHTML = `Ranking semanal: puesto <b style="color:#19ff6a">#${d.puesto}</b>` + (d.nuevoRecord ? ' · <b style="color:#ffd23f">¡récord personal guardado!</b>' : '');
-        if (d.item) mostrarItemGanado(d.item);
+        (d.items || (d.item ? [d.item] : [])).forEach((it, i) => setTimeout(() => mostrarItemGanado(it, i > 0), i * 1400));
       } else $('#envio').textContent = d.error || 'No se pudo guardar';
     })
     .catch(() => $('#envio').textContent = 'Sin conexión con el ranking');
@@ -1387,12 +1387,20 @@ if (SES) api('yo', { token: SES.token }).then(r => {
    ITEMS COLECCIONABLES Y SALA DE INVENTARIO
    ========================================================= */
 const ITEMS = {
-  calabaza: { nom: 'Calabaza Bot', img: 'img/items/calabaza.webp', ancho: 1 }
+  calabaza: { nom: 'Calabaza Bot', img: 'img/items/calabaza.webp', ancho: 1 },
+  copa_plata: { nom: 'Copa de Plata · Campeón semanal', img: 'img/items/copa_plata.webp', ancho: .95 },
+  copa_oro: { nom: 'Copa de Oro · Récord histórico', img: 'img/items/copa_oro.webp', ancho: 1.05 }
 };
 let PREMIO = null, premioAvisado = false;
 function cargaPremio() { if (CFG.API) api('top').then(d => { if (d.ok) { PREMIO = d.item || null; rkData = rkData || d; } }); }
-function mostrarItemGanado(item) {
-  const it = ITEMS[item.tipo] || { nom: item.tipo, img: 'img/icon-192.png?v=2' }, box = $('#finItem');
+function mostrarItemGanado(item, extra) {
+  const it = ITEMS[item.tipo] || { nom: item.tipo, img: 'img/icon-192.png?v=2' };
+  let box = $('#finItem');
+  if (extra) { const c = box.cloneNode(true); c.id = ''; c.classList.add('finExtra'); c.querySelector('button').onclick = () => { show(null); abrirSala(); }; box.after(c); box = c; }
+  else document.querySelectorAll('.finExtra').forEach(e => e.remove());
+  box.classList.toggle('oro', item.tipo === 'copa_oro'); box.classList.toggle('plata', item.tipo === 'copa_plata');
+  box.querySelector('small').textContent = item.tipo === 'copa_oro' ? '¡NUEVO RÉCORD HISTÓRICO!' : item.tipo === 'copa_plata' ? '¡CAMPEÓN DE LA SEMANA!' : '¡OBJETO CONSEGUIDO!';
+  if (item.tipo.startsWith('copa')) confetti();
   box.querySelector('img').src = it.img; box.querySelector('b').textContent = it.nom; box.querySelector('code').textContent = 'ID ' + item.id;
   box.classList.remove('oculto'); box.style.animation = 'none'; void box.offsetWidth; box.style.animation = '';
   Audio5.record(); flash('#ff9a2b', .3); vib([40, 30, 80]);

@@ -389,3 +389,9 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
 .salaTop{z-index:1}
 .salaItems{z-index:2}
 .salaTop .btn,.salaCnt{position:relative;z-index:3}
+
+.finItem.oro{border-color:rgba(255,210,63,.8);background:linear-gradient(90deg,rgba(255,210,63,.22),rgba(255,140,0,.08));box-shadow:0 0 26px rgba(255,210,63,.35)}
+.finItem.oro small{color:#ffd23f}
+.finItem.plata{border-color:rgba(220,235,255,.7);background:linear-gradient(90deg,rgba(210,225,245,.18),rgba(0,229,255,.06));box-shadow:0 0 22px rgba(200,225,255,.25)}
+.finItem.plata small{color:#e6f1ff}
+.finExtra{margin-top:6px}
