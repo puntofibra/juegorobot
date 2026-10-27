@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -133,7 +133,7 @@
 <!-- Ranking -->
 <section id="sRanking" class="screen">
   <div class="card ancha">
-    <img src="img/mando.webp" alt="Lucas con mando" class="lucasImg lado">
+    <div class="fxBox"><canvas id="rankFx"></canvas><img id="rankImg" src="img/gamer.webp" alt="LucasBot jugando" class="lucasImg lado"></div>
     <div class="rk">
       <h2>Ranking</h2>
       <div class="tabs"><button class="tab on" data-tab="semana">Esta semana</button><button class="tab" data-tab="total">Histórico</button></div>
@@ -169,6 +169,7 @@
         </form>
         <div class="gWrap"><div class="sep"><span>o</span></div><div class="gBtn"></div></div>
         <div class="links"><a data-ir="entrar">Ya tengo cuenta</a></div>
+        <p class="legal">Al crear la cuenta aceptas la <a href="privacidad.html" target="_blank">política de privacidad</a>.</p>
       </div>
       <div class="lv" data-v="recuperar">
         <h2>Recuperar contraseña</h2>
@@ -223,6 +224,6 @@
 </div>
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="game.js?v=14"></script>
+<script src="game.js?v=15"></script>
 </body>
 </html>

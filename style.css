@@ -181,7 +181,7 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
 .tab{flex:1;padding:9px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);font-weight:700;color:#9ab}
 .tab.on{background:rgba(25,255,106,.12);border-color:var(--v);color:#fff;box-shadow:0 0 12px rgba(25,255,106,.3)}
 .premio{font-size:15px;padding:8px 10px;border-radius:10px;background:rgba(255,210,63,.08);border:1px solid rgba(255,210,63,.4);color:#ffe9a8;margin-bottom:10px}
-.rkLista{list-style:none;max-height:min(46vh,360px);overflow-y:auto;display:grid;gap:5px;padding-right:4px;touch-action:pan-y}
+.rkLista{list-style:none;max-height:min(46vh,360px);overflow-y:auto;overflow-x:hidden;display:grid;gap:5px;padding-right:4px;touch-action:pan-y}
 .rkLista li{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.03);font-size:17px;
   animation:entra .4s both}
 .rkLista li .n{font-family:Orbitron;font-weight:900;width:28px;text-align:center;color:#7a9}
@@ -306,3 +306,13 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
   .login form{gap:1.4vh}.login h2{margin-bottom:1.5vh}.sep{margin:1vh 0}.links{margin-top:1vh}.links a{font-size:13px}.lmsg{margin-top:4px;min-height:16px;font-size:13px}
   .cuenta{padding:4px 6px}.cuenta .avatar{width:28px;height:28px}.cuenta b{font-size:15px}.cuenta small{font-size:9px}
 }
+
+/* Lucas con fuego en tarjetas */
+.fxBox{position:relative;flex:0 0 auto;padding-bottom:70px}
+.fxBox canvas{position:absolute;left:-30%;top:0;width:160%;height:100%;pointer-events:none;z-index:0}
+.fxBox .lucasImg{position:relative;z-index:1;animation:flota 3.2s ease-in-out infinite}
+@media (max-height:520px) and (orientation:landscape){.fxBox{padding-bottom:12vh}}
+@media (orientation:portrait){.fxBox{padding-bottom:50px}}
+.card.ancha>.fxBox{flex:0 0 auto}
+@media (max-height:520px) and (orientation:landscape){.fxBox .lucasImg.lado{height:44vh}.fxBox{padding-bottom:16vh}}
+.legal{font-size:12px;color:#8ab;margin-top:8px}.legal a{color:var(--c)}

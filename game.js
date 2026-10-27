@@ -1146,7 +1146,7 @@ function openRanking() {
   const ul = $('#rkLista');
   if (!CFG.API) { ul.innerHTML = '<li class="vacio">El ranking estará disponible muy pronto</li>'; return; }
   ul.innerHTML = '<li class="vacio">Cargando…</li>';
-  jsonp({ accion: 'top' }).then(d => { rkData = d; paintRanking(); }).catch(() => ul.innerHTML = '<li class="vacio">No se pudo cargar el ranking</li>');
+  api('top').then(d => { if (!d.ok) throw 0; rkData = d; paintRanking(); }).catch(() => ul.innerHTML = '<li class="vacio">No se pudo cargar el ranking</li>');
 }
 function paintRanking() {
   const ul = $('#rkLista'); if (!rkData) return;
@@ -1220,9 +1220,10 @@ document.addEventListener('pointerdown', () => Audio5.init(), { once: true });
 /* =========================================================
    FUEGO ANIMADO DE LUCAS EN EL MENÚ
    ========================================================= */
-const heroFx = $('#heroFx'), hctx = heroFx.getContext('2d'), heroImg = $('#heroImg');
-const NOZ = [[.368, .945, 1], [.457, .96, 1.15], [.55, .945, 1]];   // centro x, y de cada tobera (relativo a la imagen)
-let hParts = [];
+let hctx = null;
+const FX_MENU = { cv: $('#heroFx'), img: $('#heroImg'), noz: [[.368, .945, 1], [.457, .96, 1.15], [.55, .945, 1]], parts: [] };   // toberas: x, y relativos a la imagen
+const FX_RANK = { cv: $('#rankFx'), img: $('#rankImg'), noz: [[.245, .955, .9], [.36, .975, 1.05], [.487, .955, .9]], parts: [] };
+FX_MENU.g = FX_MENU.cv.getContext('2d'); FX_RANK.g = FX_RANK.cv.getContext('2d');
 function flamePath(x, y, w, L, wob) {
   hctx.beginPath(); hctx.moveTo(x - w / 2, y);
   hctx.bezierCurveTo(x - w / 2, y + L * .35, x - w * .2 + wob * .5, y + L * .7, x + wob, y + L);
@@ -1234,7 +1235,8 @@ function flame(x, y, w, L, wob, stops) {
   stops.forEach(([o, c]) => g.addColorStop(o, c));
   hctx.fillStyle = g; flamePath(x, y, w, L, wob); hctx.fill();
 }
-function drawHeroFire(dt, t) {
+function drawHeroFire(dt, t, o) {
+  hctx = o.g; const heroFx = o.cv, heroImg = o.img, NOZ = o.noz, hParts = o.parts;
   const cr = heroFx.getBoundingClientRect(); if (!cr.width || !heroImg.complete) return;
   const d = Math.min(window.devicePixelRatio || 1, 2), cw = Math.round(cr.width * d), ch = Math.round(cr.height * d);
   if (heroFx.width !== cw || heroFx.height !== ch) { heroFx.width = cw; heroFx.height = ch; }
@@ -1365,7 +1367,8 @@ let last = performance.now();
 function loop(now) {
   const dt = Math.min(.034, (now - last) / 1000); last = now;
   update(dt); render();
-  if (state === 'menu' || state === 'load') drawHeroFire(dt, now / 1000);
+  if (state === 'menu' || state === 'load') drawHeroFire(dt, now / 1000, FX_MENU);
+  if ($('#sRanking').classList.contains('show')) drawHeroFire(dt, now / 1000, FX_RANK);
   requestAnimationFrame(loop);
 }
 resize(); paintSnd();
