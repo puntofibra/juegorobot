@@ -277,3 +277,32 @@ input:focus{border-color:var(--c);box-shadow:0 0 16px rgba(0,229,255,.35)}
 .flecha{position:absolute;top:-6px;right:-6px;width:56px;height:56px;stroke:var(--v);filter:drop-shadow(0 0 6px var(--v));animation:flechaPulse 2.4s infinite}
 @keyframes giraMovil{0%,20%{transform:rotate(0)}55%,85%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
 @keyframes flechaPulse{0%,20%{opacity:1}55%,100%{opacity:.25}}
+
+/* ---------- Cuenta / acceso ---------- */
+.cuenta{display:flex;align-items:center;gap:10px;padding:7px 8px 7px 10px;border-radius:14px;background:rgba(25,255,106,.07);border:1px solid rgba(25,255,106,.3);text-align:left}
+.cuenta .avatar{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;font-family:Orbitron;font-weight:900;color:#02110a;
+  background:linear-gradient(135deg,var(--v),var(--c));box-shadow:0 0 12px rgba(25,255,106,.5)}
+.cuenta .cnom{flex:1;min-width:0;line-height:1.1}
+.cuenta small{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8ab}
+.cuenta b{display:block;font-size:18px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn.mini{padding:7px 12px;font-size:13px;width:auto!important;margin:0!important;flex:0 0 auto}
+.login .loginCol{position:relative}
+.lv{display:none}.lv.on{display:block;animation:entra .35s both}
+.login form{display:grid;gap:10px}
+.login input{text-align:left}
+.campoU{position:relative}.campoU i{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-style:normal;font-size:13px;font-weight:700}
+.campoU i.ok{color:var(--v)}.campoU i.no{color:#ff5c7a}
+.links{display:flex;justify-content:space-between;gap:10px;margin-top:12px;flex-wrap:wrap}
+.links a{color:var(--c);cursor:pointer;font-weight:600;font-size:15px;text-decoration:underline;text-underline-offset:3px}
+.lmsg{min-height:20px;margin-top:10px;font-size:15px;font-weight:600;color:#ffd23f;text-align:center}
+.lmsg.err{color:#ff6d86}.lmsg.ok{color:var(--v)}
+.sep{display:flex;align-items:center;gap:10px;margin:12px 0 10px;color:#7a9;font-size:13px}
+.sep::before,.sep::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.12)}
+.gBtn{display:flex;justify-content:center;min-height:40px}
+.gWrap.oculto{display:none}
+.cerrarX{position:absolute;top:-14px;right:-10px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#cde;font-size:15px}
+.login .btn.jugar.peq{margin-top:2px}
+@media (max-height:520px) and (orientation:landscape){
+  .login form{gap:1.4vh}.login h2{margin-bottom:1.5vh}.sep{margin:1vh 0}.links{margin-top:1vh}.links a{font-size:13px}.lmsg{margin-top:4px;min-height:16px;font-size:13px}
+  .cuenta{padding:4px 6px}.cuenta .avatar{width:28px;height:28px}.cuenta b{font-size:15px}.cuenta small{font-size:9px}
+}

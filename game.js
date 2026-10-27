@@ -3,7 +3,8 @@
    ========================================================= */
 'use strict';
 const CFG = {
-  API: '',            // URL /exec de Apps Script (ranking)
+  API: 'https://script.google.com/macros/s/AKfycbz-jBZwrOqy0Lz7Ln49xJAnjGpg8UPaGiF680tAHkLQnQDG75Y77mFFylLvtGhEXAu3/exec',
+  GOOGLE: '',         // ID de cliente OAuth para «Entrar con Google»
   URL: 'https://puntofibra.github.io/juegorobot/',
   SAL: 'lucas5g-fm'
 };
@@ -1038,8 +1039,7 @@ let fraseI = 0, fraseTimer;
 function goMenu() {
   state = 'menu'; L.vis = false; Audio5.mode('menu'); Audio5.thrustOff();
   $('#hud').classList.add('oculto'); $('#btnPausa').classList.add('oculto');
-  $('#mRecord').textContent = best.toLocaleString('es-ES');
-  $('#nombre').value = load('nombre', '');
+  pintaCuenta(); $('#cuenta').innerHTML = '';
   show('#sMenu');
   clearInterval(fraseTimer);
   fraseTimer = setInterval(() => { const b = $('#bocadillo'); b.classList.add('out'); setTimeout(() => { fraseI = (fraseI + 1) % FRASES.length; b.textContent = FRASES[fraseI]; b.classList.remove('out'); }, 300); }, 3800);
@@ -1070,9 +1070,9 @@ window.addEventListener('orientationchange', () => setTimeout(resize, 250));
 window.matchMedia('(orientation:portrait)').addEventListener && window.matchMedia('(orientation:portrait)').addEventListener('change', () => { if (enVertical()) pause(); setTimeout(resize, 250); });
 function startGame() {
   if (enVertical()) { pantallaJuego(); return; }
+  if (!SES) { abrirLogin('entrar'); return; }
   pantallaJuego();
   Audio5.init(); Audio5.click();
-  const n = $('#nombre').value.trim().slice(0, 16); if (n) store('nombre', n);
   clearInterval(fraseTimer);
   show(null); resetGame(); state = 'count'; Audio5.mode('game');
   $('#hud').classList.remove('oculto'); updPwHud(); updCombo();
@@ -1099,11 +1099,8 @@ function gameOver() {
   countUp('#fPts', pts); countUp('#fM', lastResult.m); countUp('#fD', coins); $('#fBest').textContent = best.toLocaleString('es-ES');
   show('#sFin', true);
   if (rec && pts > 0) { Audio5.record(); confetti(); }
-  const nombre = load('nombre', '');
   $('#envio').textContent = '';
-  if (!CFG.API) { $('#finNombre').classList.add('oculto'); return; }
-  if (nombre) { $('#finNombre').classList.add('oculto'); enviar(nombre); }
-  else { $('#finNombre').classList.remove('oculto'); $('#envio').textContent = 'Pon tu nombre para entrar en el ranking'; }
+  if (SES) enviar();
 }
 function countUp(sel, val) {
   const el = $(sel), t0 = performance.now(), dur = 900;
@@ -1129,12 +1126,17 @@ function jsonp(params) {
     document.head.appendChild(s);
   });
 }
-function enviar(nombre) {
-  if (!lastResult || lastResult.pts <= 0) return;
-  const r = lastResult, f = firma([nombre, r.pts, r.m, r.d, r.dur].join('|'));
-  $('#envio').textContent = 'Enviando al ranking…';
-  jsonp({ accion: 'enviar', nombre, puntos: r.pts, metros: r.m, datos: r.d, dur: r.dur, dev: DEV, firma: f })
-    .then(d => { if (d.ok) $('#envio').innerHTML = `Ranking semanal: puesto <b style="color:#19ff6a">#${d.puesto}</b>`; else $('#envio').textContent = d.error || 'No se pudo guardar'; })
+function enviar() {
+  if (!lastResult || lastResult.pts <= 0 || !SES) return;
+  const r = lastResult, f = firma([SES.perfil.usuario, r.pts, r.m, r.d, r.dur].join('|'));
+  $('#envio').textContent = 'Guardando en el ranking…';
+  api('enviar', { token: SES.token, puntos: r.pts, metros: r.m, datos: r.d, dur: r.dur, firma: f })
+    .then(d => {
+      if (d.ok) {
+        SES.perfil.partidas++; if (d.nuevoRecord) SES.perfil.record = r.pts; store('ses', SES);
+        $('#envio').innerHTML = `Ranking semanal: puesto <b style="color:#19ff6a">#${d.puesto}</b>` + (d.nuevoRecord ? ' · <b style="color:#ffd23f">¡récord personal guardado!</b>' : '');
+      } else $('#envio').textContent = d.error || 'No se pudo guardar';
+    })
     .catch(() => $('#envio').textContent = 'Sin conexión con el ranking');
 }
 let rkData = null, rkTab = 'semana';
@@ -1148,7 +1150,7 @@ function openRanking() {
 }
 function paintRanking() {
   const ul = $('#rkLista'); if (!rkData) return;
-  const list = rkData[rkTab] || [], yo = (load('nombre', '') || '').toLowerCase();
+  const list = rkData[rkTab] || [], yo = (SES ? SES.perfil.usuario : '').toLowerCase();
   const pr = $('#premio');
   if (rkTab === 'semana' && rkData.premio) { pr.textContent = 'Premio de la semana: ' + rkData.premio; pr.classList.remove('oculto'); } else pr.classList.add('oculto');
   if (!list.length) { ul.innerHTML = '<li class="vacio">Todavía no hay puntuaciones. ¡Sé el primero!</li>'; return; }
@@ -1208,7 +1210,6 @@ $('#btnFinMenu').onclick = () => { Audio5.click(); goMenu(); };
 $('#btnPausa').onclick = e => { e.stopPropagation(); pause(); };
 $('#btnSeguir').onclick = resume;
 $('#btnSalir').onclick = () => { Audio5.click(); goMenu(); };
-$('#btnGuardar').onclick = () => { const n = $('#nombre2').value.trim().slice(0, 16); if (!n) return toast('Escribe tu nombre'); store('nombre', n); $('#finNombre').classList.add('oculto'); enviar(n); };
 $$('[data-cerrar]').forEach(b => b.onclick = () => { Audio5.click(); if (state === 'over') show('#sFin', true); else if (state === 'pause') show('#sPausa', true); else goMenu(); });
 $$('.tab').forEach(t => t.onclick = () => { rkTab = t.dataset.tab; $$('.tab').forEach(x => x.classList.toggle('on', x === t)); Audio5.click(); paintRanking(); });
 $('#btnSonido').onclick = () => { Audio5.init(); Audio5.toggleSnd(); paintSnd(); };
@@ -1267,6 +1268,95 @@ function drawHeroFire(dt, t) {
   if (hParts.length > 260) hParts.splice(0, hParts.length - 260);
   hctx.globalAlpha = 1; hctx.globalCompositeOperation = 'source-over';
 }
+
+
+/* =========================================================
+   CUENTAS: registro, acceso, Google y recuperación
+   ========================================================= */
+let SES = load('ses', null), trasLogin = null;
+function api(accion, datos) {
+  return fetch(CFG.API, { method: 'POST', body: JSON.stringify(Object.assign({ accion }, datos || {})) })
+    .then(r => r.json()).catch(() => ({ ok: false, error: 'Sin conexión. Inténtalo otra vez.' }));
+}
+function pintaCuenta() {
+  const rec = Math.max(best, SES ? SES.perfil.record || 0 : 0);
+  $('#mRecord').textContent = rec.toLocaleString('es-ES');
+  const c = $('#miCuenta');
+  if (SES) { c.classList.remove('oculto'); $('#cUsuario').textContent = SES.perfil.usuario; c.querySelector('.avatar').textContent = SES.perfil.usuario[0].toUpperCase(); }
+  else c.classList.add('oculto');
+  $('#btnJugar span').textContent = SES ? 'JUGAR' : 'ENTRAR Y JUGAR';
+}
+function sesion(d) {
+  SES = { token: d.token, perfil: d.perfil }; store('ses', SES);
+  if (SES.perfil.record > best) { best = SES.perfil.record; store('best', best); }
+  Audio5.zone(); toast('¡Hola, ' + d.perfil.usuario + '!'); pintaCuenta();
+  goMenu(); setTimeout(startGame, 350);
+}
+function vistaLogin(v) {
+  $$('#sLogin .lv').forEach(x => x.classList.toggle('on', x.dataset.v === v));
+  msg('');
+  const f = $(`#sLogin .lv[data-v="${v}"] input`); if (f && !esMovil) setTimeout(() => f.focus(), 80);
+}
+function abrirLogin(v) { Audio5.init(); Audio5.click(); show('#sLogin', true); vistaLogin(v || 'entrar'); initGoogle(); }
+function msg(t, tipo) { const m = $('#lMsg'); m.textContent = t || ''; m.className = 'lmsg ' + (tipo || ''); }
+function ocupado(form, on) { const b = form.querySelector('button[type=submit]'); b.disabled = on; b.style.opacity = on ? .6 : 1; }
+async function enviarForm(form, accion, extra) {
+  const d = Object.fromEntries(new FormData(form)); ocupado(form, true); msg('Un momento…');
+  const r = await api(accion, Object.assign(d, extra || {})); ocupado(form, false);
+  return r;
+}
+$('#fEntrar').onsubmit = async e => { e.preventDefault(); const r = await enviarForm(e.target, 'entrar'); r.ok ? sesion(r) : msg(r.error, 'err'); };
+$('#fCrear').onsubmit = async e => { e.preventDefault(); const r = await enviarForm(e.target, 'registrar'); r.ok ? sesion(r) : msg(r.error, 'err'); };
+$('#fRecuperar').onsubmit = async e => {
+  e.preventDefault(); const r = await enviarForm(e.target, 'recuperar');
+  if (!r.ok) return msg(r.error, 'err');
+  $('#rsEmail').value = $('#rEmail').value; vistaLogin('restablecer'); msg('Si el correo tiene cuenta, te hemos enviado el código. Mira también en spam.', 'ok');
+};
+$('#fRestablecer').onsubmit = async e => { e.preventDefault(); const r = await enviarForm(e.target, 'restablecer'); r.ok ? sesion(r) : msg(r.error, 'err'); };
+$$('#sLogin [data-ir]').forEach(a => a.onclick = () => { Audio5.click(); vistaLogin(a.dataset.ir); });
+$('#btnSalirCuenta').onclick = () => { Audio5.click(); if (SES) api('salir', { token: SES.token }); SES = null; store('ses', null); pintaCuenta(); toast('Has cerrado sesión'); };
+
+// comprobar si el nombre de usuario está libre mientras se escribe
+function vigilaUsuario(inp, est) {
+  let tm;
+  inp.addEventListener('input', () => {
+    clearTimeout(tm); const u = inp.value.trim(); est.className = ''; est.textContent = '';
+    if (!u) return;
+    if (!/^[A-Za-z0-9ÑñÁÉÍÓÚáéíóúÜü_.\-]{3,16}$/.test(u)) { est.className = 'no'; est.textContent = u.length < 3 ? 'mín. 3' : 'no válido'; return; }
+    est.textContent = '…';
+    tm = setTimeout(async () => {
+      const r = await api('disponible', { usuario: u });
+      if (inp.value.trim() !== u) return;
+      est.className = r.disponible ? 'ok' : 'no'; est.textContent = r.disponible ? '✓ libre' : '✗ cogido';
+    }, 450);
+  });
+}
+vigilaUsuario($('#cUser'), $('#cUserEst'));
+vigilaUsuario($('#gUser'), $('#gUserEst'));
+
+// Entrar con Google
+let gIniciado = false, gCred = null;
+function initGoogle() {
+  if (!CFG.GOOGLE) { $$('#sLogin .gWrap').forEach(g => g.classList.add('oculto')); return; }
+  if (gIniciado) return;
+  if (!(window.google && google.accounts && google.accounts.id)) { setTimeout(initGoogle, 300); return; }
+  gIniciado = true;
+  google.accounts.id.initialize({ client_id: CFG.GOOGLE, callback: async res => {
+    gCred = res.credential; msg('Entrando con Google…');
+    const r = await api('google', { credential: gCred });
+    if (!r.ok) return msg(r.error, 'err');
+    if (r.necesitaUsuario) { vistaLogin('gusuario'); $('#gUser').value = r.sugerido || ''; $('#gUser').dispatchEvent(new Event('input')); return; }
+    sesion(r);
+  } });
+  $$('#sLogin .gBtn').forEach(el => google.accounts.id.renderButton(el, { theme: 'filled_black', size: 'large', shape: 'pill', text: 'continue_with', locale: 'es' }));
+}
+$('#fGUsuario').onsubmit = async e => { e.preventDefault(); const r = await enviarForm(e.target, 'google', { credential: gCred }); r.ok && !r.necesitaUsuario ? sesion(r) : msg(r.error || 'Elige otro nombre', 'err'); };
+
+// validar la sesión guardada al abrir el juego
+if (SES) api('yo', { token: SES.token }).then(r => {
+  if (r.ok) { SES.perfil = r.perfil; store('ses', SES); if (r.perfil.record > best) { best = r.perfil.record; store('best', best); } pintaCuenta(); }
+  else if (r.sesion === false) { SES = null; store('ses', null); pintaCuenta(); }
+});
 
 /* =========================================================
    ARRANQUE

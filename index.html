@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -66,7 +66,7 @@
       <div class="logoWrap"><img src="img/logo.webp" alt="FuturMovil" class="logoImg"><i class="logoBrillo"></i></div>
       <div class="titulo"><span>presenta</span><b>LUCASBOT<em>5G</em></b></div>
       <div class="record">Tu récord: <b id="mRecord">0</b></div>
-      <input id="nombre" maxlength="16" placeholder="Tu nombre para el ranking" autocomplete="nickname">
+      <div id="miCuenta" class="cuenta oculto"><span class="avatar"></span><span class="cnom"><small>Jugando como</small><b id="cUsuario"></b></span><button id="btnSalirCuenta" class="btn ter mini">Salir</button></div>
       <button id="btnJugar" class="btn jugar"><span>JUGAR</span></button>
       <div class="fila">
         <button id="btnRanking" class="btn sec">Ranking</button>
@@ -120,10 +120,6 @@
         <div><b id="fBest">0</b><small>récord</small></div>
       </div>
       <div class="envio" id="envio"></div>
-      <div class="fila nombreFila oculto" id="finNombre">
-        <input id="nombre2" maxlength="16" placeholder="Tu nombre">
-        <button id="btnGuardar" class="btn sec">Guardar</button>
-      </div>
       <button id="btnOtra" class="btn jugar peq">Otra vez</button>
       <div class="fila">
         <button id="btnFinRank" class="btn sec">Ranking</button>
@@ -148,6 +144,66 @@
   </div>
 </section>
 
+<!-- Acceso -->
+<section id="sLogin" class="screen">
+  <div class="card ancha login">
+    <img src="img/capa.webp" alt="LucasBot" class="lucasImg lado">
+    <div class="loginCol">
+      <div class="lv" data-v="entrar">
+        <h2>Entra para jugar</h2>
+        <form id="fEntrar" autocomplete="on">
+          <input name="id" id="lId" placeholder="Correo o nombre de usuario" autocomplete="username" required>
+          <input name="pass" id="lPass" type="password" placeholder="Contraseña" autocomplete="current-password" required>
+          <button class="btn jugar peq" type="submit">Entrar</button>
+        </form>
+        <div class="gWrap"><div class="sep"><span>o</span></div><div class="gBtn"></div></div>
+        <div class="links"><a data-ir="crear">Crear cuenta</a><a data-ir="recuperar">¿Olvidaste la contraseña?</a></div>
+      </div>
+      <div class="lv" data-v="crear">
+        <h2>Crear cuenta</h2>
+        <form id="fCrear" autocomplete="on">
+          <input name="email" type="email" placeholder="Tu correo" autocomplete="email" required>
+          <div class="campoU"><input name="usuario" id="cUser" maxlength="16" placeholder="Nombre de usuario (sale en el ranking)" autocomplete="nickname" required><i id="cUserEst"></i></div>
+          <input name="pass" type="password" placeholder="Contraseña (mínimo 6)" autocomplete="new-password" required minlength="6">
+          <button class="btn jugar peq" type="submit">Crear y jugar</button>
+        </form>
+        <div class="gWrap"><div class="sep"><span>o</span></div><div class="gBtn"></div></div>
+        <div class="links"><a data-ir="entrar">Ya tengo cuenta</a></div>
+      </div>
+      <div class="lv" data-v="recuperar">
+        <h2>Recuperar contraseña</h2>
+        <p class="txt">Te enviamos un código de 6 cifras a tu correo.</p>
+        <form id="fRecuperar">
+          <input name="email" type="email" id="rEmail" placeholder="Tu correo" autocomplete="email" required>
+          <button class="btn jugar peq" type="submit">Enviar código</button>
+        </form>
+        <div class="links"><a data-ir="restablecer">Ya tengo un código</a><a data-ir="entrar">Volver</a></div>
+      </div>
+      <div class="lv" data-v="restablecer">
+        <h2>Nueva contraseña</h2>
+        <form id="fRestablecer">
+          <input name="email" type="email" id="rsEmail" placeholder="Tu correo" autocomplete="email" required>
+          <input name="codigo" inputmode="numeric" maxlength="6" placeholder="Código de 6 cifras" autocomplete="one-time-code" required>
+          <input name="pass" type="password" placeholder="Contraseña nueva (mínimo 6)" autocomplete="new-password" required minlength="6">
+          <button class="btn jugar peq" type="submit">Guardar y jugar</button>
+        </form>
+        <div class="links"><a data-ir="recuperar">Reenviar código</a><a data-ir="entrar">Volver</a></div>
+      </div>
+      <div class="lv" data-v="gusuario">
+        <h2>Elige tu nombre</h2>
+        <p class="txt">Es el nombre que saldrá en el ranking.</p>
+        <form id="fGUsuario">
+          <div class="campoU"><input name="usuario" id="gUser" maxlength="16" placeholder="Nombre de usuario" required><i id="gUserEst"></i></div>
+          <button class="btn jugar peq" type="submit">Empezar</button>
+        </form>
+        <div class="links"><a data-ir="entrar">Cancelar</a></div>
+      </div>
+      <div class="lmsg" id="lMsg"></div>
+      <button class="cerrarX" data-cerrar aria-label="Cerrar">✕</button>
+    </div>
+  </div>
+</section>
+
 <!-- Instalar iPhone -->
 <section id="sIos" class="screen">
   <div class="card">
@@ -166,6 +222,7 @@
   </div>
 </div>
 <div id="toast"></div>
-<script src="game.js?v=12"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="game.js?v=13"></script>
 </body>
 </html>
