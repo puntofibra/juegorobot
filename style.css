@@ -591,3 +591,19 @@ body.admQr #girar{display:none!important}
   .mCaja{padding:12px 16px 12px}.mIco{width:40px;height:40px;font-size:18px;margin-bottom:4px}.mCaja h3{font-size:15px;margin-bottom:4px}
   .mItems{max-height:90px}.mItems img{width:34px;height:34px}.mItems span{width:50px}.mBtns{margin-top:10px}.mBtns .btn{padding:9px;font-size:15px}
 }
+/* Canjear trofeos */
+.canjeRes{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.cjI{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;background:rgba(255,92,122,.05);border:1px solid rgba(255,92,122,.3);transition:opacity .35s,transform .35s}
+.cjI.fuera{opacity:0;transform:translateX(30px)}
+.cjI img{width:56px;height:56px;object-fit:contain;flex:0 0 auto}
+.cjI>div{flex:1;min-width:0}.cjI b{font-size:16px;color:#fff}
+.cjI code{display:block;font-family:Orbitron;font-size:12px;color:var(--c);letter-spacing:.06em}
+.cjI small{display:block;color:#8ab;font-size:13px}.cjI small b{font-size:13px}
+.cjI .btn{width:auto;margin:0;padding:9px 16px}
+.canjeLog{display:flex;flex-direction:column;gap:4px}
+.cjL{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.03)}
+.cjL img{width:30px;height:30px;object-fit:contain}.cjL span{min-width:0;font-size:14px}.cjL code{color:#7fe9ff;font-size:12px}
+.cjL small{display:block;color:#789;font-size:12px}
+.admNota.err{color:#ff7a92}
+.mNota{margin-top:12px;text-align:left}
+.mTxt p{margin-top:6px}

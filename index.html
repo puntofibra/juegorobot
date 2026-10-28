@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=21">
+<link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -223,7 +223,7 @@
     <div class="admPanel oculto" id="admPanel">
       <header class="admHead">
         <b>PANEL ADMIN</b>
-        <nav id="admTabs"><button data-t="trofeos" class="on">Trofeos</button><button data-t="premios">Premio semanal</button><button data-t="jugadores">Jugadores</button><button data-t="regalar">Regalar</button></nav>
+        <nav id="admTabs"><button data-t="trofeos" class="on">Trofeos</button><button data-t="premios">Premio semanal</button><button data-t="jugadores">Jugadores</button><button data-t="regalar">Regalar</button><button data-t="canjear">Canjear</button></nav>
         <button class="admX admCerrar" aria-label="Cerrar">✕</button>
       </header>
       <div class="admCont">
@@ -258,6 +258,16 @@
           <h3>Jugadores <small id="jugCnt"></small></h3>
           <input id="admBuscar" placeholder="Buscar jugador o correo…">
           <div id="admJug" class="admJug"></div>
+        </div>
+        <div class="admTab" data-t="canjear">
+          <h3>Canjear trofeos <small>(entregas el premio en mano y el trofeo se elimina)</small></h3>
+          <form id="fCanje" class="admForm linea">
+            <input name="q" list="admUsuarios" placeholder="ID del trofeo (LB-…) o nombre del jugador" autocomplete="off" required>
+            <button class="btn sec" type="submit">Buscar</button>
+          </form>
+          <div id="canjeRes" class="canjeRes"></div>
+          <h3>Últimos canjes</h3>
+          <div id="canjeLog" class="canjeLog"></div>
         </div>
         <div class="admTab" data-t="regalar">
           <h3>Regalar un trofeo</h3>
@@ -354,6 +364,6 @@
 </div>
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="game.js?v=26"></script>
+<script src="game.js?v=27"></script>
 </body>
 </html>

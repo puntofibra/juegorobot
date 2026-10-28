@@ -1687,7 +1687,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
     $$('#admTabs button').forEach(x => x.classList.toggle('on', x === b));
     $$('.admTab').forEach(x => x.classList.toggle('on', x.dataset.t === b.dataset.t)); Audio5.click();
   });
-  function pintaTodo() { pintaCatalogo(); pintaSelects(); pintaPremios(); pintaJugadores(); }
+  function pintaTodo() { pintaCatalogo(); pintaSelects(); pintaPremios(); pintaJugadores(); cargaCanjes(); }
 
   /* ---- trofeos ---- */
   function pintaCatalogo() {
@@ -1804,6 +1804,50 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
       });
     });
   }
+
+  /* ---- canjear (premio en mano → se elimina el trofeo) ---- */
+  const fechaC = t => t ? new Date(t).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  function cargaCanjes() {
+    adm('canjes').then(d => {
+      if (!d.ok) return;
+      $('#canjeLog').innerHTML = d.canjes.length ? d.canjes.map(c => { const it = itemDe(c.tipo);
+        return `<div class="cjL"><img src="${esc(it.img)}" alt=""><span><b>${esc(it.nom)}</b> <code>${esc(c.id)}</code><small>${esc(c.usuario)} · ${fechaC(c.fecha)}${c.nota ? ' · ' + esc(c.nota) : ''}</small></span></div>`; }).join('')
+        : '<p class="admNota">Todavía no se ha canjeado ningún trofeo.</p>';
+    });
+  }
+  function pintaCanje(items, usuario) {
+    const res = $('#canjeRes');
+    if (!items.length) { res.innerHTML = `<p class="admNota">${esc(usuario)} no tiene trofeos para canjear.</p>`; return; }
+    res.innerHTML = items.map(o => { const it = itemDe(o.tipo);
+      return `<div class="cjI"><img src="${esc(it.img)}" alt=""><div><b>${esc(it.nom)}</b><code>${esc(o.id)}</code><small>De <b>${esc(o.usuario || usuario)}</b> · conseguido ${fechaC(o.fecha)}${o.origen ? ' · ' + esc(o.origen) : ''}</small></div>
+        <button class="btn peligro" data-id="${esc(o.id)}" data-u="${esc(o.usuario || usuario)}" data-t="${esc(o.tipo)}">Canjear</button></div>`; }).join('');
+    $$('#canjeRes [data-id]').forEach(b => b.onclick = () => canjear(b));
+  }
+  function canjear(b) {
+    const it = itemDe(b.dataset.t);
+    confirma({ ico: '🎁', peligro: true, titulo: 'Canjear trofeo', si: 'Canjear y eliminar', no: 'Cancelar',
+      html: `<div class="mItems" style="justify-content:center"><span style="width:90px"><img src="${esc(it.img)}" alt="" style="width:64px;height:64px"><i>${esc(it.nom)}</i></span></div>
+        <p>Vas a entregar el premio en mano a <b>${esc(b.dataset.u)}</b> y su trofeo <b>${esc(b.dataset.id)}</b> se eliminará de su sala.</p>
+        <input id="mNota" class="mNota" maxlength="200" placeholder="¿Qué premio le das? (opcional)">` }).then(si => {
+      if (!si) return;
+      const nota = ($('#mNota') || {}).value || '';
+      b.disabled = true; b.textContent = '…';
+      adm('canjear', { id: b.dataset.id, nota }).then(d => {
+        if (!d.ok) { b.disabled = false; b.textContent = 'Canjear'; return toast(d.error || 'No se pudo canjear'); }
+        toast(`Canjeado: ${d.id} de ${d.usuario}`); Audio5.record(); vib([30, 30, 90]);
+        const card = b.closest('.cjI'); card.classList.add('fuera'); setTimeout(() => card.remove(), 400);
+        cargaCanjes(); recargar();
+      });
+    });
+  }
+  $('#fCanje').onsubmit = e => {
+    e.preventDefault(); const q = e.target.q.value.trim(); if (!q) return;
+    const res = $('#canjeRes'); res.innerHTML = '<p class="admNota">Buscando…</p>';
+    if (/^LB-/i.test(q)) return adm('buscarItem', { id: q }).then(d => d.ok ? pintaCanje(d.items) : res.innerHTML = `<p class="admNota err">${esc(d.error)}</p>`);
+    const j = ADMD && ADMD.jugadores.find(x => x.usuario.toLowerCase() === q.toLowerCase());
+    if (!j) { res.innerHTML = '<p class="admNota err">No hay ningún jugador ni trofeo con ese nombre o ID.</p>'; return; }
+    adm('itemsJugador', { id: j.id }).then(d => d.ok ? pintaCanje(d.items, j.usuario) : res.innerHTML = '<p class="admNota err">Error al cargar</p>');
+  };
 
   /* ---- regalar ---- */
   $('#fRegalar').onsubmit = e => {
