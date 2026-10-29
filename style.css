@@ -724,3 +724,74 @@ label.pruebas b{display:block;color:#fff;font-size:15px}label.pruebas small{disp
 .marcaPruebas{display:none;position:fixed;z-index:26;top:calc(14px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);pointer-events:none;
   font-family:Orbitron;font-size:10px;font-weight:900;letter-spacing:.1em;padding:4px 12px;border-radius:999px;background:rgba(255,176,0,.92);color:#1a0d00;box-shadow:0 0 14px rgba(255,176,0,.5)}
 body.pruebas .marcaPruebas{display:block}
+
+/* ===== Sala de chat tipo Habbo ===== */
+.btnLobby{display:inline-flex;align-items:center;gap:6px}.btnLobby svg{width:18px;height:18px}
+.chatSala{position:fixed;inset:0;z-index:27;background:#050814;opacity:0;pointer-events:none;transition:opacity .35s;overflow:hidden;touch-action:none}
+.chatSala.show{opacity:1;pointer-events:auto}
+.chatSala:not(.show) *{pointer-events:none!important}
+#chatCv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.chatTop{position:absolute;top:calc(10px + env(safe-area-inset-top));left:12px;right:12px;display:flex;align-items:center;gap:12px;pointer-events:none}
+.chatTop>*{pointer-events:auto}
+.chatTop .btn{width:auto!important;margin:0!important;background:rgba(5,10,22,.7);backdrop-filter:blur(6px)}
+.chatTit{flex:1;text-align:center;pointer-events:none!important}
+.chatTit small{display:block;font-size:10px;letter-spacing:.3em;color:#8ab}
+.chatTit b{font-family:Orbitron;font-size:16px;letter-spacing:.1em;color:#e6fdff;text-shadow:0 0 12px var(--c)}
+.chatCnt{text-align:center;padding:4px 12px;border-radius:12px;background:rgba(5,10,22,.7);border:1px solid rgba(25,255,106,.35)}
+.chatCnt b{display:block;font-family:Orbitron;color:var(--v);font-size:16px;line-height:1}.chatCnt small{font-size:10px;color:#8ab}
+.chatLog{position:absolute;left:12px;bottom:66px;width:min(340px,40vw);max-height:38vh;overflow-y:auto;display:flex;flex-direction:column;gap:3px;pointer-events:auto;touch-action:pan-y;
+  mask-image:linear-gradient(transparent,#000 22%);-webkit-mask-image:linear-gradient(transparent,#000 22%)}
+.chatLog p{font-size:13px;color:#cfe;background:rgba(5,10,22,.6);padding:3px 8px;border-radius:8px;word-break:break-word;user-select:text;-webkit-user-select:text}
+.chatLog p b{color:var(--v)}.chatLog p.yo b{color:var(--c)}.chatLog p.sis{color:#8ab;font-style:italic}
+.chatBar{position:absolute;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));display:flex;gap:6px;align-items:center}
+.chatBar input{flex:1;padding:10px 14px;font-size:15px;border-radius:14px;background:rgba(5,10,22,.85)}
+.chatBar .btn{width:auto!important;margin:0!important;padding:10px 16px!important}
+.chatBar .emo{width:40px;height:40px;flex:0 0 40px;border-radius:12px;font-size:20px;background:rgba(5,10,22,.75);border:1px solid rgba(0,229,255,.35)}
+.chatBar .emo:active{transform:scale(.9)}
+.chatMenu{position:absolute;z-index:3;display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:14px;background:rgba(8,14,28,.95);border:1px solid rgba(25,255,106,.5);box-shadow:0 0 20px rgba(25,255,106,.25);transform:translate(-50%,-100%);animation:entra .2s both}
+.chatMenu b{text-align:center;font-family:Orbitron;font-size:13px;color:#fff;margin-bottom:2px}
+.chatMenu .btn{width:100%!important;margin:0!important}
+.chatEstado{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 18px;border-radius:14px;background:rgba(5,10,22,.85);color:#cfe;font-size:15px;pointer-events:none;transition:opacity .3s}
+.chatEstado.fuera{opacity:0}
+@media (max-height:520px) and (orientation:landscape){
+  .chatTit b{font-size:13px}.chatLog{bottom:56px;max-height:30vh;width:min(300px,38vw)}.chatLog p{font-size:12px}
+  .chatBar input{padding:7px 12px;font-size:14px}.chatBar .emo{width:34px;height:34px;flex-basis:34px;font-size:17px}.chatBar .btn{padding:7px 12px!important}
+}
+
+/* ===== Inventario: sala a la izquierda + menú de secciones a la derecha ===== */
+#sInv{--mw:210px;--bw:min(calc(100vw - var(--mw)),calc(100vh * 2200 / 1228))}
+#sInv .salaBox{left:0;top:50%;transform:translateY(-50%) scale(.96);transform-origin:left center;width:var(--bw);border-radius:0 12px 12px 0}
+#sInv.show .salaBox{transform:translateY(-50%) scale(1)}
+#sInv .salaItems{border-radius:0 12px 12px 0}
+.salaVolver{position:absolute;z-index:4;top:12px;left:12px;width:auto!important;margin:0!important;padding:10px 18px!important;font-size:16px;font-weight:800;letter-spacing:.06em;
+  color:#02110a;background:linear-gradient(135deg,#19ff6a,#7dffb0);border-radius:14px;box-shadow:0 0 0 2px rgba(255,255,255,.25),0 0 22px rgba(25,255,106,.6),0 6px 14px rgba(0,0,0,.4)}
+.salaVolver span{font-size:18px;margin-right:4px}
+.salaVolver:hover{filter:brightness(1.08)}
+#sInv .salaTit{position:absolute;z-index:3;top:10px;left:50%;transform:translateX(-50%);pointer-events:none;flex:none;white-space:nowrap}
+#sInv .salaCnt{position:absolute;z-index:3;top:12px;right:12px}
+#sInv .salaAyuda{bottom:14px}
+#sInv .salaEstado{bottom:14px;right:14px}
+.salaMenu{position:absolute;top:0;bottom:0;right:0;left:var(--bw);min-width:var(--mw);display:flex;flex-direction:column;gap:10px;padding:calc(14px + env(safe-area-inset-top)) 12px 14px;
+  background:linear-gradient(180deg,rgba(6,10,22,.92),rgba(4,6,14,.96));border-left:1px solid rgba(25,255,106,.25);box-shadow:-10px 0 30px rgba(0,0,0,.35);overflow-y:auto;touch-action:pan-y}
+.salaMenu h4{font-family:Orbitron;font-size:11px;letter-spacing:.3em;color:#7fe9ff;text-align:center;margin:2px 0 4px}
+.secBtn{position:relative;display:flex;align-items:center;gap:10px;width:100%;padding:12px;border-radius:14px;text-align:left;color:#e6fdff;
+  background:linear-gradient(135deg,rgba(0,229,255,.10),rgba(25,255,106,.06));border:1px solid rgba(0,229,255,.4);transition:transform .15s,box-shadow .2s,border-color .2s}
+.secBtn:hover{border-color:var(--v);box-shadow:0 0 18px rgba(25,255,106,.3)}
+.secBtn:active{transform:scale(.97)}
+.secBtn .sIco{flex:0 0 40px;height:40px;border-radius:12px;display:grid;place-items:center;background:rgba(25,255,106,.12);color:var(--v)}
+.secBtn .sIco svg{width:22px;height:22px}
+.secBtn .sTxt{flex:1;min-width:0}.secBtn b{display:block;font-size:16px}.secBtn small{display:block;font-size:12px;color:#8ab;line-height:1.2}
+.secBtn i{position:absolute;top:8px;right:8px;font-style:normal;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--v);color:#02110a;font-size:12px;font-weight:800;display:grid;place-items:center}
+.secBtn i.cero{background:rgba(255,255,255,.15);color:#cde}
+.secBtn.aviso{animation:latidoT 1s infinite}
+.secPronto{margin-top:auto;text-align:center;font-size:12px;color:#678;padding:10px;border:1px dashed rgba(255,255,255,.12);border-radius:12px}
+@media (max-height:520px) and (orientation:landscape){
+  #sInv{--mw:160px}
+  .salaVolver{top:8px;left:8px;padding:7px 12px!important;font-size:14px}
+  #sInv .salaCnt{top:8px;right:8px;padding:3px 9px}#sInv .salaCnt b{font-size:16px}
+  #sInv .salaTit{top:6px}
+  .salaMenu{gap:7px;padding:10px 8px}
+  .secBtn{padding:8px;gap:8px}.secBtn .sIco{flex-basis:32px;height:32px}.secBtn b{font-size:14px}.secBtn small{font-size:10px}
+  #sInv .salaAyuda{font-size:11px;padding:4px 10px;bottom:8px}
+}
+.secBtn i{position:static;flex:0 0 auto;align-self:center}

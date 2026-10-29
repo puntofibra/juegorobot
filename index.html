@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=27">
+<link rel="stylesheet" href="style.css?v=28">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -166,13 +166,18 @@
   <div class="salaFondo"></div>
   <div class="salaBox" id="salaBox">
     <div class="salaItems" id="salaItems"></div>
-  </div>
-  <div class="salaTop">
-    <button class="btn sec mini" id="btnSalaVolver">← Volver</button>
+    <button class="btn salaVolver" id="btnSalaVolver"><span>←</span> Volver</button>
     <div class="salaTit"><small>SALA DE</small><b id="salaNom">—</b></div>
     <div class="salaCnt"><b id="salaCnt">0</b><small>objetos</small></div>
-    <button class="btn sec mini btnTrueque" id="btnTrueque"><svg viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Intercambiar<i id="onCnt">0</i></button>
+    <div class="salaAyuda" id="salaAyuda">Arrastra tus objetos para colocarlos donde quieras</div>
+    <div class="salaEstado" id="salaEstado"></div>
   </div>
+  <nav class="salaMenu" id="salaMenu">
+    <h4>SECCIONES</h4>
+    <button class="secBtn btnTrueque" id="btnTrueque"><span class="sIco"><svg viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="sTxt"><b>Intercambiar</b><small>Con jugadores conectados</small></span><i id="onCnt">0</i></button>
+    <button class="secBtn btnLobby" id="btnLobby"><span class="sIco"><svg viewBox="0 0 24 24"><path d="M4 5h16v10H9l-5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 9h8M8 12h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="sTxt"><b>Sala de chat</b><small>Lobby Futurmovil</small></span></button>
+    <div class="secPronto">✨ Más secciones muy pronto</div>
+  </nav>
   <div class="tPanel oculto" id="tPanel">
     <div class="tCaja">
       <div class="tVista" data-v="lista">
@@ -212,8 +217,6 @@
       </div>
     </div>
   </div>
-  <div class="salaAyuda" id="salaAyuda">Arrastra tus objetos para colocarlos donde quieras</div>
-  <div class="salaEstado" id="salaEstado"></div>
   <div class="itemInfo oculto" id="itemInfo"><img alt=""><div><b></b><code></code><small></small></div></div>
 </section>
 
@@ -221,6 +224,26 @@
 <div class="actualiza oculto" id="actualiza"><div><div class="tSpin"></div><b>¡Nueva versión de LUCASBOT!</b><small>Actualizando…</small></div></div>
 <div class="modal oculto" id="modal" role="dialog" aria-modal="true"><div class="mCaja"><div class="mIco" id="mIco"></div><h3 id="mTit"></h3><div class="mTxt" id="mTxt"></div><div class="mBtns"><button class="btn ter" id="mNo">Cancelar</button><button class="btn jugar peq" id="mSi">Aceptar</button></div></div></div>
 <div class="tAviso oculto" id="tAviso"><span class="tIco">⇄</span><div><b id="tAvisoTit"></b><small id="tAvisoTxt"></small></div><button class="btn jugar mini" id="tAvisoVer">Ver</button><button class="tX" id="tAvisoNo">✕</button></div>
+
+<!-- Sala de chat tipo Habbo -->
+<section id="sChat" class="chatSala">
+  <canvas id="chatCv"></canvas>
+  <div class="chatTop">
+    <button class="btn sec mini" id="btnChatVolver">← Mi sala</button>
+    <div class="chatTit"><small>SALA DE CHAT</small><b>LOBBY FUTURMOVIL</b></div>
+    <div class="chatCnt"><b id="chatN">1</b><small>conectados</small></div>
+  </div>
+  <div class="chatLog" id="chatLog"></div>
+  <form class="chatBar" id="chatForm" autocomplete="off">
+    <button type="button" class="emo" data-e="saluda" title="Saludar">👋</button>
+    <button type="button" class="emo" data-e="baile" title="Bailar">🕺</button>
+    <button type="button" class="emo" data-e="amor" title="Corazón">❤️</button>
+    <input id="chatTxt" maxlength="120" placeholder="Escribe un mensaje y pulsa Enter…" enterkeyhint="send">
+    <button class="btn jugar mini" type="submit">Enviar</button>
+  </form>
+  <div class="chatMenu oculto" id="chatMenu"><b id="chatMenuNom"></b><button class="btn sec mini" id="chatMenuTrato">⇄ Intercambiar</button><button class="btn ter mini" id="chatMenuHola">👋 Saludar</button></div>
+  <div class="chatEstado" id="chatEstado">Entrando en la sala…</div>
+</section>
 
 <!-- Acceso -->
 <!-- Administración (10 toques a Lucas en el menú) -->
@@ -390,6 +413,6 @@
 </div>
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="game.js?v=35"></script>
+<script src="game.js?v=36"></script>
 </body>
 </html>

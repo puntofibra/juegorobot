@@ -1305,7 +1305,7 @@ function startGame() {
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();   // que la barra espaciadora no vuelva a pulsar el botón
   if (guardando) { toast('Espera un momento, guardando tu puntuación…'); return; }
   if (enVertical()) { pantallaJuego(); return; }
-  if ($('#sInv').classList.contains('show')) return;
+  if ($('#sInv').classList.contains('show') || CHAT_ON) return;
   if (!SES) { abrirLogin('entrar'); return; }
   PARTIDA = null; api('inicio', { token: SES.token }).then(d => { if (d.ok) { PARTIDA = d.partida; if (d.minimo) MIN_HOY = d.minimo; } else if (d.sesion === false) { SES = null; store('ses', null); } });
   Audio5.init(); Audio5.click();
@@ -1784,9 +1784,10 @@ cargaPremio();
 /* =========================================================
    ARRANQUE
    ========================================================= */
-let last = performance.now();
+let last = performance.now(), CHAT_ON = false;
 function loop(now) {
   const dt = Math.min(.034, (now - last) / 1000); last = now;
+  if (CHAT_ON) { requestAnimationFrame(loop); return; }   // en la sala de chat no se dibuja el juego de fondo
   update(dt); render();
   if (state === 'menu' || state === 'load') drawHeroFire(dt, now / 1000, FX_MENU);
   if ($('#sRanking').classList.contains('show')) drawHeroFire(dt, now / 1000, FX_RANK);
@@ -1806,7 +1807,7 @@ requestAnimationFrame(loop);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---- actualización automática: si hay una versión nueva, se recarga sola en el menú ---- */
-const VERSION = 35;   // subir este número (y version.json) en cada actualización
+const VERSION = 36;   // subir este número (y version.json) en cada actualización
 let nuevaVersion = 0, actualizando = false, ultVer = 0;
 function compruebaVersion(forzar) {
   if (actualizando || (!forzar && Date.now() - ultVer < 30000)) return; ultVer = Date.now();
@@ -1814,7 +1815,7 @@ function compruebaVersion(forzar) {
     .then(d => { if (d && Number(d.v) > VERSION) { nuevaVersion = Number(d.v); intentaActualizar(); } }).catch(() => {});
 }
 function libreParaActualizar() {
-  return state === 'menu' && $('#sMenu').classList.contains('show') && !guardando && !$('#sInv').classList.contains('show')
+  return state === 'menu' && $('#sMenu').classList.contains('show') && !guardando && !$('#sInv').classList.contains('show') && !CHAT_ON
     && $('#modal').classList.contains('oculto') && !$('#sAdmin').classList.contains('show');
 }
 function intentaActualizar() {
@@ -2165,7 +2166,7 @@ setInterval(intentaActualizar, 3000);   // si llegó durante una partida, se apl
 (() => {
   const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const itemDe = t => ITEMS[t] || { nom: t, img: 'img/icon-192.png?v=2' };
-  const salaAbierta = () => $('#sInv').classList.contains('show');
+  const salaAbierta = () => $('#sInv').classList.contains('show') || CHAT_ON;
   let ONLINE = [], TR = null, pingT = 0, verT = 0, ofertaT = 0, miOferta = new Set(), vistoFin = '', avisoCerrado = '';
 
   /* ---- ping: conectados + trato pendiente ---- */
@@ -2219,6 +2220,10 @@ setInterval(intentaActualizar, 3000);   // si llegó durante una partida, se apl
       Audio5.click(); recibe(d.trato, true);
     });
   }
+  window.trueque = {   // para la sala de chat
+    invitar(usuario) { api('trato', { token: SES.token, op: 'invitar', a: usuario }).then(d => { if (!d.ok) return toast(d.error || 'No se pudo invitar'); Audio5.click(); recibe(d.trato, true); }); },
+    activo: () => TR && (TR.estado === 'invitado' || TR.estado === 'abierto'), ver: () => TR && muestraTrato(TR)
+  };
 
   /* ---- llega el estado del trato (por ping o por una acción) ---- */
   function recibe(t, directo) {
@@ -3094,3 +3099,221 @@ function aplicaTema(t, ya, prueba) {
   layers = buildLayers(zona); prevLayers = null; layerFade = 1;
 }
 textosTema(); document.body.classList.toggle('pruebas', !!TEMA_PRUEBA);
+
+/* =========================================================
+   SALA DE CHAT TIPO HABBO (lobby isométrico)
+   ========================================================= */
+(() => {
+  const cv = $('#chatCv'), g = cv.getContext('2d'), N = 10;
+  let Wc = 0, Hc = 0, DP = 1, TW = 64, TH = 32, WH = 96, OX = 0, OY = 0;
+  const yo = { x: 5, y: 8, px: 5, py: 8, dir: 1 };
+  const otros = new Map(), burbujas = new Map();
+  let seq = 0, enCurso = false, pendMsg = '', emo = '', emoHasta = 0, rafId = 0, syncId = 0, hover = null, menuDe = null, lastT = 0, primera = true;
+  const DECOR = [{ x: 0, y: 0, t: 'copa_oro' }, { x: 9, y: 0, t: 'copa_plata' }, { x: 0, y: 9, t: 'calabaza' }];
+  const bloqueada = (x, y) => DECOR.some(d => d.x === x && d.y === y);
+  const logo = new Image(); logo.src = 'img/logo.webp?v=2';
+  const miNombre = () => SES ? SES.perfil.usuario : '';
+  const colNombre = n => { let h = 0; for (const ch of n) h = (h * 31 + ch.charCodeAt(0)) % 360; return `hsl(${h},90%,62%)`; };
+
+  function tam() {
+    DP = Math.min(window.devicePixelRatio || 1, 2); Wc = innerWidth; Hc = innerHeight;
+    cv.width = Math.round(Wc * DP); cv.height = Math.round(Hc * DP);
+    const arriba = 64, abajo = 64, util = Hc - arriba - abajo;
+    TH = Math.max(12, Math.min(util / (N + 3.4), (Wc - 30) / (N * 2 + 1))); TW = TH * 2; WH = TH * 3.2;
+    OX = Wc / 2; OY = arriba + WH + Math.max(0, (util - (N * TH + WH)) / 2);
+  }
+  const T = (x, y) => [OX + (x - y) * TW / 2, OY + (x + y) * TH / 2];             // vértice superior de la casilla
+  const C = (x, y) => [OX + (x - y) * TW / 2, OY + (x + y) * TH / 2 + TH / 2];    // centro de la casilla
+  function casilla(sx, sy) { const a = (sx - OX) / (TW / 2), b = (sy - OY) / (TH / 2), x = Math.floor((a + b) / 2), y = Math.floor((b - a) / 2); return x >= 0 && y >= 0 && x < N && y < N ? { x, y } : null; }
+  const rombo = (x, y) => { const [tx, ty] = T(x, y); g.beginPath(); g.moveTo(tx, ty); g.lineTo(tx + TW / 2, ty + TH / 2); g.lineTo(tx, ty + TH); g.lineTo(tx - TW / 2, ty + TH / 2); g.closePath(); };
+
+  function paredes(t) {
+    const [ax, ay] = T(0, 0), [lx, ly] = [OX - N * TW / 2, OY + N * TH / 2], [rx, ry] = [OX + N * TW / 2, OY + N * TH / 2];
+    // pared izquierda
+    let gr = g.createLinearGradient(lx, 0, ax, 0); gr.addColorStop(0, '#0c1230'); gr.addColorStop(1, '#141d44');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(ax, ay); g.lineTo(lx, ly); g.lineTo(lx, ly - WH); g.lineTo(ax, ay - WH); g.closePath(); g.fill();
+    // ventanas con la ciudad de noche
+    for (let k = 0; k < 3; k++) {
+      const u0 = 1.3 + k * 2.9, u1 = u0 + 2, p = u => [ax - u * TW / 2, ay + u * TH / 2];
+      const [x0, y0] = p(u0), [x1, y1] = p(u1), top = WH * .78, bot = WH * .28;
+      const wg = g.createLinearGradient(0, y0 - top, 0, y0 - bot); wg.addColorStop(0, '#05030f'); wg.addColorStop(1, '#1d0b3a');
+      g.fillStyle = wg; g.beginPath(); g.moveTo(x0, y0 - top); g.lineTo(x1, y1 - top); g.lineTo(x1, y1 - bot); g.lineTo(x0, y0 - bot); g.closePath(); g.fill();
+      g.save(); g.clip();
+      for (let i = 0; i < 14; i++) { const f = i / 14, bx = x0 + (x1 - x0) * f, by = y0 + (y1 - y0) * f - bot, bh = WH * (.1 + .28 * ((i * 37) % 7) / 7); g.fillStyle = '#0a0f22'; g.fillRect(bx, by - bh, (x1 - x0) / 14 + 1, bh); if (Math.sin(t * 2 + i) > .3) { g.fillStyle = i % 3 ? '#19ff6a' : '#00e5ff'; g.fillRect(bx + 2, by - bh + 4, 2, 2); } }
+      g.restore();
+      g.strokeStyle = 'rgba(0,229,255,.7)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x0, y0 - top); g.lineTo(x1, y1 - top); g.lineTo(x1, y1 - bot); g.lineTo(x0, y0 - bot); g.closePath(); g.stroke();
+    }
+    // pared derecha
+    gr = g.createLinearGradient(ax, 0, rx, 0); gr.addColorStop(0, '#1a2452'); gr.addColorStop(1, '#10173a');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(ax, ay); g.lineTo(rx, ry); g.lineTo(rx, ry - WH); g.lineTo(ax, ay - WH); g.closePath(); g.fill();
+    // logo Futurmovil como cartel de neón en la pared
+    if (logo.complete && logo.naturalWidth) {
+      const u0 = 2.2, lw = 5.6 * TW / 2, lh = lw * logo.naturalHeight / logo.naturalWidth, [px, py] = [ax + u0 * TW / 2, ay + u0 * TH / 2 - WH * .78];
+      g.save(); g.translate(px, py); g.transform(1, .5, 0, 1, 0, 0);
+      g.shadowColor = '#00e5ff'; g.shadowBlur = 14 + Math.sin(t * 3) * 4; g.drawImage(logo, 0, 0, lw, lh); g.restore();
+    }
+    // tiras de neón
+    g.lineWidth = 2; g.strokeStyle = 'rgba(25,255,106,.85)'; g.beginPath(); g.moveTo(lx, ly - WH); g.lineTo(ax, ay - WH); g.lineTo(rx, ry - WH); g.stroke();
+    g.strokeStyle = 'rgba(0,229,255,.6)'; g.beginPath(); g.moveTo(lx, ly); g.lineTo(ax, ay); g.lineTo(rx, ry); g.stroke();
+    g.strokeStyle = 'rgba(25,255,106,.35)'; g.beginPath(); g.moveTo(ax, ay); g.lineTo(ax, ay - WH); g.stroke();
+  }
+  function suelo(t) {
+    for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) {
+      rombo(x, y); g.fillStyle = (x + y) % 2 ? '#0d1630' : '#101c3a'; g.fill();
+      g.strokeStyle = 'rgba(0,229,255,.16)'; g.lineWidth = 1; g.stroke();
+    }
+    // alfombra central con brillo
+    for (let x = 3; x <= 6; x++) for (let y = 3; y <= 6; y++) { rombo(x, y); g.fillStyle = `rgba(25,255,106,${.05 + .03 * Math.sin(t * 2 + x + y)})`; g.fill(); }
+    if (hover && !bloqueada(hover.x, hover.y)) { rombo(hover.x, hover.y); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 2; g.stroke(); }
+    if (Math.hypot(yo.px - yo.x, yo.py - yo.y) > .05) { rombo(yo.x, yo.y); g.fillStyle = 'rgba(25,255,106,.25)'; g.fill(); }
+  }
+  function decor(d, t) {
+    const [cx, cy] = C(d.x, d.y), it = ITEMS[d.t];
+    g.fillStyle = '#1a2452'; g.beginPath(); g.moveTo(cx - TW * .3, cy); g.lineTo(cx, cy + TH * .3); g.lineTo(cx + TW * .3, cy); g.lineTo(cx + TW * .3, cy - TH * .6); g.lineTo(cx, cy - TH * .3); g.lineTo(cx - TW * .3, cy - TH * .6); g.closePath(); g.fill();
+    g.fillStyle = '#26336e'; g.beginPath(); g.moveTo(cx - TW * .3, cy - TH * .6); g.lineTo(cx, cy - TH * .9); g.lineTo(cx + TW * .3, cy - TH * .6); g.lineTo(cx, cy - TH * .3); g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(0,229,255,.6)'; g.lineWidth = 1; g.stroke();
+    const im = it && (decor.img[d.t] || (decor.img[d.t] = Object.assign(new Image(), { src: it.img })));
+    if (im && im.complete && im.naturalWidth) { const h = TH * 2.6, w = h * im.naturalWidth / im.naturalHeight; g.drawImage(im, cx - w / 2, cy - TH * .75 - h + Math.sin(t * 2 + d.x) * 2, w, h); }
+  }
+  decor.img = {};
+  function avatar(a, nom, t, esYo) {
+    const [cx, cy] = C(a.px, a.py), im = IMG.capa; if (!im || !im.naturalWidth) return;
+    const h = TH * 3.5, w = h * im.naturalWidth / im.naturalHeight, anda = Math.hypot(a.px - a.x, a.py - a.y) > .05;
+    const e = a.e || '', baila = e === 'baile', salta = e === 'saluda';
+    let bob = Math.sin(t * (anda ? 10 : 2.4) + (a.ph || 0)) * (anda ? 2.5 : 1.6); if (salta) bob -= Math.abs(Math.sin(t * 9)) * TH * .5;
+    g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.ellipse(cx, cy, TW * .26, TH * .22, 0, 0, TAU); g.fill();
+    g.save(); g.translate(cx, cy - TH * .15 + bob); if (baila) g.rotate(Math.sin(t * 8) * .25); g.scale(a.dir < 0 ? -1 : 1, 1);
+    g.drawImage(im, -w / 2, -h, w, h); g.restore();
+    // nombre
+    const ty = cy - h - TH * .25 + bob; g.font = `700 ${Math.max(11, TH * .42)}px Rajdhani, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const tw = g.measureText(nom).width + 14, th = Math.max(16, TH * .62);
+    g.fillStyle = 'rgba(5,10,22,.78)'; g.beginPath(); g.roundRect ? g.roundRect(cx - tw / 2, ty - th / 2, tw, th, th / 2) : g.rect(cx - tw / 2, ty - th / 2, tw, th); g.fill();
+    g.strokeStyle = esYo ? '#19ff6a' : colNombre(nom); g.lineWidth = 1.2; g.stroke();
+    g.fillStyle = esYo ? '#19ff6a' : '#fff'; g.fillText(nom, cx, ty + 1);
+    if (e === 'amor') for (let k = 0; k < 3; k++) { const f = ((t * .8 + k / 3) % 1); g.globalAlpha = 1 - f; g.font = `${TH * .7}px sans-serif`; g.fillText('❤️', cx + Math.sin(f * 6 + k) * TW * .2, ty - th - f * TH * 2); g.globalAlpha = 1; }
+    if (salta) { g.font = `${TH * .8}px sans-serif`; g.fillText('👋', cx + TW * .32, ty - th * .2); }
+    a._sx = cx; a._top = ty - th; a._sy = cy;
+    // bocadillos
+    const bs = burbujas.get(nom); if (!bs) return;
+    let by = ty - th / 2 - 6; const ahora = performance.now() / 1000;
+    for (let i = bs.length - 1; i >= 0; i--) {
+      const b = bs[i], edad = ahora - b.t; if (edad > 8) { bs.splice(i, 1); continue; }
+      g.font = `600 ${Math.max(12, TH * .45)}px Rajdhani, sans-serif`;
+      const lineas = partir(b.txt, Math.max(120, TW * 3.2)), lh = Math.max(14, TH * .52), bw = Math.min(Math.max(...lineas.map(l => g.measureText(l).width)) + 18, TW * 3.6), bh = lineas.length * lh + 8;
+      by -= bh + 6; g.globalAlpha = edad > 7 ? 8 - edad : Math.min(1, edad * 6);
+      g.fillStyle = '#fff'; g.beginPath(); g.roundRect ? g.roundRect(cx - bw / 2, by, bw, bh, 9) : g.rect(cx - bw / 2, by, bw, bh); g.fill();
+      if (i === bs.length - 1) { g.beginPath(); g.moveTo(cx - 6, by + bh); g.lineTo(cx, by + bh + 7); g.lineTo(cx + 6, by + bh); g.fill(); }
+      g.fillStyle = '#0a1020'; lineas.forEach((l, k) => g.fillText(l, cx, by + 4 + lh / 2 + k * lh));
+      g.globalAlpha = 1;
+    }
+  }
+  function partir(txt, max) {
+    const pal = txt.split(' '), out = []; let l = '';
+    for (const p of pal) { const prueba = l ? l + ' ' + p : p; if (g.measureText(prueba).width > max && l) { out.push(l); l = p; } else l = prueba; }
+    if (l) out.push(l); return out.slice(0, 4);
+  }
+  function mover(a, dt) {
+    const dx = a.x - a.px, dy = a.y - a.py, d = Math.hypot(dx, dy); if (d < .001) { a.px = a.x; a.py = a.y; return; }
+    const v = Math.min(d, 3.4 * dt); a.px += dx / d * v; a.py += dy / d * v;
+    const sxd = dx - dy; if (Math.abs(sxd) > .01) a.dir = sxd > 0 ? 1 : -1;
+  }
+  function frame(now) {
+    if (!CHAT_ON) return;
+    const t = now / 1000, dt = Math.min(.05, lastT ? t - lastT : 0); lastT = t;
+    mover(yo, dt); otros.forEach(o => mover(o, dt));
+    if (emo && t > emoHasta) emo = '';
+    yo.e = emo;
+    g.setTransform(DP, 0, 0, DP, 0, 0);
+    const bg = g.createLinearGradient(0, 0, 0, Hc); bg.addColorStop(0, '#03040c'); bg.addColorStop(1, '#0a1226'); g.fillStyle = bg; g.fillRect(0, 0, Wc, Hc);
+    paredes(t); suelo(t);
+    const ents = DECOR.map(d => ({ k: d.x + d.y, f: () => decor(d, t) }));
+    ents.push({ k: yo.px + yo.py + .01, f: () => avatar(yo, miNombre(), t, true) });
+    otros.forEach((o, nom) => ents.push({ k: o.px + o.py, f: () => avatar(o, nom, t, false) }));
+    ents.sort((a, b) => a.k - b.k).forEach(e => e.f());
+    rafId = requestAnimationFrame(frame);
+  }
+
+  /* ---- red ---- */
+  function log(nom, txt, clase) {
+    const box = $('#chatLog'), p = document.createElement('p'); if (clase) p.className = clase;
+    if (nom) { const b = document.createElement('b'); b.textContent = nom + ': '; p.appendChild(b); }
+    p.appendChild(document.createTextNode(txt)); box.appendChild(p);
+    while (box.children.length > 60) box.firstChild.remove();
+    box.scrollTop = box.scrollHeight;
+  }
+  function burbuja(nom, txt) { if (!burbujas.has(nom)) burbujas.set(nom, []); const l = burbujas.get(nom); l.push({ txt, t: performance.now() / 1000 }); if (l.length > 3) l.shift(); }
+  function sync() {
+    if (!CHAT_ON || enCurso || document.hidden) return;
+    enCurso = true; const msg = pendMsg; pendMsg = '';
+    api('chat', { token: SES.token, op: 'sync', x: yo.x, y: yo.y, e: emo, msg, desde: seq }).then(d => {
+      enCurso = false;
+      if (!d.ok) { if (msg) pendMsg = msg + (pendMsg ? ' ' + pendMsg : ''); estado(d.error || 'Sin conexión con la sala…'); return; }
+      estado('');
+      const vistos = new Set();
+      d.users.forEach(u => {
+        if (u.u === miNombre()) return; vistos.add(u.u);
+        let o = otros.get(u.u);
+        if (!o) { o = { x: u.x, y: u.y, px: u.x, py: u.y, dir: 1, ph: Math.random() * 6 }; otros.set(u.u, o); if (!primera) log('', u.u + ' ha entrado en la sala', 'sis'); }
+        o.x = u.x; o.y = u.y; o.e = u.e;
+      });
+      otros.forEach((o, n) => { if (!vistos.has(n)) { otros.delete(n); log('', n + ' ha salido de la sala', 'sis'); } });
+      d.msgs.forEach(m => { const mio = m.u === miNombre(); if (!(mio && !primera)) { log(m.u, m.txt, mio ? 'yo' : ''); if (!primera) burbuja(m.u, m.txt); } });
+      seq = d.seq || seq; primera = false;
+      $('#chatN').textContent = d.users.length;
+    });
+  }
+  function estado(txt) { const e = $('#chatEstado'); if (txt) { e.textContent = txt; e.classList.remove('fuera'); } else e.classList.add('fuera'); }
+  function decir(txt) {
+    txt = String(txt || '').trim().slice(0, 120); if (!txt) return;
+    pendMsg = pendMsg ? pendMsg + ' ' + txt : txt;
+    burbuja(miNombre(), txt); log(miNombre(), txt, 'yo'); Audio5.click();
+    setTimeout(sync, 60);
+  }
+
+  /* ---- entrada ---- */
+  function punto(e) { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+  cv.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { const [x, y] = punto(e); hover = casilla(x, y); } });
+  cv.addEventListener('pointerdown', e => {
+    const [x, y] = punto(e); cerrarMenu();
+    // ¿ha tocado a otro jugador?
+    let sel = null; otros.forEach((o, n) => { if (o._sx != null && Math.abs(x - o._sx) < TW * .45 && y > o._top - 6 && y < o._sy + 4) sel = n; });
+    if (sel) { abrirMenu(sel); return; }
+    const c = casilla(x, y); if (!c || bloqueada(c.x, c.y)) return;
+    yo.x = c.x; yo.y = c.y; Audio5.click(); setTimeout(sync, 30);
+  });
+  function abrirMenu(nom) {
+    menuDe = nom; const o = otros.get(nom), m = $('#chatMenu');
+    $('#chatMenuNom').textContent = nom; m.style.left = o._sx + 'px'; m.style.top = Math.max(70, o._top - 8) + 'px'; m.classList.remove('oculto'); Audio5.click();
+  }
+  function cerrarMenu() { $('#chatMenu').classList.add('oculto'); menuDe = null; }
+  $('#chatMenuTrato').onclick = () => { const n = menuDe; cerrarMenu(); if (!n) return; if (window.trueque.activo()) return window.trueque.ver(); window.trueque.invitar(n); };
+  $('#chatMenuHola').onclick = () => { const n = menuDe; cerrarMenu(); if (n) { emo = 'saluda'; emoHasta = performance.now() / 1000 + 3; decir('👋 ¡Hola, ' + n + '!'); } };
+  $('#chatForm').onsubmit = e => { e.preventDefault(); const i = $('#chatTxt'); decir(i.value); i.value = ''; };
+  $$('#chatForm .emo').forEach(b => b.onclick = () => { emo = b.dataset.e; emoHasta = performance.now() / 1000 + (emo === 'baile' ? 6 : 3); Audio5.click(); setTimeout(sync, 30); });
+  $('#chatTxt').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') e.target.blur(); });
+
+  /* ---- abrir / cerrar ---- */
+  function abrirChat() {
+    if (!SES) return abrirLogin('entrar');
+    CHAT_ON = true; Audio5.click();
+    $('#sInv').classList.remove('show'); $('#sChat').classList.add('show'); $('#sChat').appendChild($('#tPanel'));
+    tam(); otros.clear(); burbujas.clear(); seq = 0; primera = true; pendMsg = ''; emo = ''; cerrarMenu();
+    yo.x = yo.px = 3 + Math.floor(Math.random() * 4); yo.y = yo.py = 7 + Math.floor(Math.random() * 3); yo.dir = 1;
+    $('#chatLog').innerHTML = ''; log('', 'Bienvenido al lobby, ' + miNombre() + '. Toca el suelo para moverte y a otro jugador para intercambiar.', 'sis');
+    estado('Entrando en la sala…'); lastT = 0;
+    cancelAnimationFrame(rafId); rafId = requestAnimationFrame(frame);
+    clearInterval(syncId); syncId = setInterval(sync, 1200); sync();
+  }
+  function cerrarChat() {
+    if (!CHAT_ON) return;
+    CHAT_ON = false; clearInterval(syncId); cancelAnimationFrame(rafId); cerrarMenu();
+    api('chat', { token: SES.token, op: 'salir' });
+    $('#sChat').classList.remove('show'); $('#sInv').appendChild($('#tPanel'));
+    abrirSala();
+  }
+  $('#btnLobby').onclick = abrirChat;
+  $('#btnChatVolver').onclick = cerrarChat;
+  window.addEventListener('resize', () => { if (CHAT_ON) tam(); });
+  window.addEventListener('keydown', e => { if (CHAT_ON && e.code === 'Escape' && document.activeElement !== $('#chatTxt')) cerrarChat(); });
+  window.addEventListener('pagehide', () => { if (CHAT_ON && SES) navigator.sendBeacon && navigator.sendBeacon(CFG.API, JSON.stringify({ accion: 'chat', op: 'salir', token: SES.token })); });
+})();
