@@ -1808,7 +1808,7 @@ requestAnimationFrame(loop);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---- actualización automática: si hay una versión nueva, se recarga sola en el menú ---- */
-const VERSION = 37;   // subir este número (y version.json) en cada actualización
+const VERSION = 38;   // subir este número (y version.json) en cada actualización
 let nuevaVersion = 0, actualizando = false, ultVer = 0;
 function compruebaVersion(forzar) {
   if (actualizando || (!forzar && Date.now() - ultVer < 30000)) return; ultVer = Date.now();
@@ -3109,7 +3109,7 @@ textosTema(); document.body.classList.toggle('pruebas', !!TEMA_PRUEBA);
   let Wc = 0, Hc = 0, DP = 1, TW = 64, TH = 32, WH = 96, OX = 0, OY = 0;
   const yo = { x: 5, y: 8, px: 5, py: 8, dir: 1 };
   const otros = new Map(), burbujas = new Map();
-  let actividad = 0, firma0 = '';
+  let actividad = 0, firma0 = '', frameDt = 0;
   /* ritmo adaptativo: si alguien se mueve o escribe, consulta cada 0,7 s; si la sala está en calma, cada 2 s.
      Con mucha gente se frena un poco para no saturar el servidor. */
   function bucleSync() {
@@ -3118,7 +3118,7 @@ textosTema(); document.body.classList.toggle('pruebas', !!TEMA_PRUEBA);
     sync(); syncId = setTimeout(bucleSync, calma ? 2000 : mucha ? 1100 : 700);
   }
   let seq = 0, enCurso = false, pendMsg = '', emo = '', emoHasta = 0, rafId = 0, syncId = 0, hover = null, menuDe = null, lastT = 0, primera = true;
-  const DECOR = [{ x: 0, y: 0, t: 'copa_oro' }, { x: 9, y: 0, t: 'copa_plata' }, { x: 0, y: 9, t: 'calabaza' }];
+  const DECOR = [{ x: 0, y: 0, t: 'copa_oro' }, { x: 9, y: 0, t: 'copa_plata' }];
   const bloqueada = (x, y) => DECOR.some(d => d.x === x && d.y === y);
   const logo = new Image(); logo.src = 'img/logo.webp?v=2';
   const miNombre = () => SES ? SES.perfil.usuario : '';
@@ -3189,9 +3189,19 @@ textosTema(); document.body.classList.toggle('pruebas', !!TEMA_PRUEBA);
     const [cx, cy] = C(a.px, a.py), im = IMG.capa; if (!im || !im.naturalWidth) return;
     const h = TH * 3.5, w = h * im.naturalWidth / im.naturalHeight, anda = Math.hypot(a.px - a.x, a.py - a.y) > .05;
     const e = a.e || '', baila = e === 'baile', salta = e === 'saluda';
-    let bob = Math.sin(t * (anda ? 10 : 2.4) + (a.ph || 0)) * (anda ? 2.5 : 1.6); if (salta) bob -= Math.abs(Math.sin(t * 9)) * TH * .5;
-    g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.ellipse(cx, cy, TW * .26, TH * .22, 0, 0, TAU); g.fill();
+    a.fz = (a.fz || 0) + ((anda ? 1 : 0) - (a.fz || 0)) * Math.min(1, frameDt * 7);   // fuego: se enciende al moverse y se apaga al parar
+    let bob = Math.sin(t * 2.4 + (a.ph || 0)) * 1.6 - a.fz * TH * .45 + Math.sin(t * 14 + (a.ph || 0)) * a.fz * 1.2; if (salta) bob -= Math.abs(Math.sin(t * 9)) * TH * .5;
+    g.fillStyle = `rgba(0,0,0,${.45 - a.fz * .15})`; g.beginPath(); g.ellipse(cx, cy, TW * (.26 - a.fz * .04), TH * (.22 - a.fz * .03), 0, 0, TAU); g.fill();
     g.save(); g.translate(cx, cy - TH * .15 + bob); if (baila) g.rotate(Math.sin(t * 8) * .25); g.scale(a.dir < 0 ? -1 : 1, 1);
+    if (a.fz > .03) {   // llamas de las toberas (como en el menú)
+      g.globalCompositeOperation = 'lighter';
+      for (const [nx, ny, k] of FX_MENU.noz) {
+        const x = -w / 2 + nx * w, y = -h + ny * h, L = h * .62 * a.fz * k * (.85 + Math.random() * .3), fw = w * .17 * k;
+        g.globalAlpha = .85 * a.fz; g.drawImage(glowSpr('#19ff6a'), x - fw / 2, y - fw * .25, fw, L);
+        g.globalAlpha = .9 * a.fz; g.drawImage(glowSpr('#eafff2'), x - fw * .22, y - fw * .1, fw * .44, L * .55);
+      }
+      g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    }
     g.drawImage(im, -w / 2, -h, w, h); g.restore();
     // nombre
     const ty = cy - h - TH * .25 + bob; g.font = `700 ${Math.max(11, TH * .42)}px Rajdhani, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -3228,7 +3238,7 @@ textosTema(); document.body.classList.toggle('pruebas', !!TEMA_PRUEBA);
   }
   function frame(now) {
     if (!CHAT_ON) return;
-    const t = now / 1000, dt = Math.min(.05, lastT ? t - lastT : 0); lastT = t;
+    const t = now / 1000, dt = Math.min(.05, lastT ? t - lastT : 0); lastT = t; frameDt = dt;
     mover(yo, dt); otros.forEach(o => mover(o, dt));
     if (emo && t > emoHasta) emo = '';
     yo.e = emo;
