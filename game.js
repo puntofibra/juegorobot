@@ -1660,6 +1660,32 @@ loadImages(() => {
 requestAnimationFrame(loop);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
+/* ---- actualización automática: si hay una versión nueva, se recarga sola en el menú ---- */
+const VERSION = 31;   // subir este número (y version.json) en cada actualización
+let nuevaVersion = 0, actualizando = false, ultVer = 0;
+function compruebaVersion(forzar) {
+  if (actualizando || (!forzar && Date.now() - ultVer < 30000)) return; ultVer = Date.now();
+  fetch('version.json?n=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.json() : null)
+    .then(d => { if (d && Number(d.v) > VERSION) { nuevaVersion = Number(d.v); intentaActualizar(); } }).catch(() => {});
+}
+function libreParaActualizar() {
+  return state === 'menu' && $('#sMenu').classList.contains('show') && !guardando && !$('#sInv').classList.contains('show')
+    && $('#modal').classList.contains('oculto') && !$('#sAdmin').classList.contains('show');
+}
+function intentaActualizar() {
+  if (!nuevaVersion || actualizando || !libreParaActualizar()) return;
+  actualizando = true;
+  const ov = $('#actualiza'); ov.classList.remove('oculto');
+  (async () => {
+    try { const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); } catch (e) {}
+    try { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch (e) {}
+  })().finally(() => setTimeout(() => location.reload(), 1400));
+}
+setTimeout(() => compruebaVersion(true), 4000);
+setInterval(() => compruebaVersion(true), 120000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') compruebaVersion(); });
+setInterval(intentaActualizar, 3000);   // si llegó durante una partida, se aplica al volver al menú
+
 /* =========================================================
    PANEL DE ADMINISTRACIÓN · 10 toques a Lucas en 5 s + llave NFC
    ========================================================= */

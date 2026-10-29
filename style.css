@@ -645,3 +645,8 @@ body.tema-halloween .btn.jugar{animation:shine 2.5s linear infinite,latidoH 1.6s
 .tPrev.halloween i{position:absolute;left:0;right:0;bottom:18px;height:34px;background:repeating-linear-gradient(90deg,#030204 0 16px,transparent 16px 22px,#050207 22px 36px,transparent 36px 42px);border-top:2px solid #ff7a1a}
 .tPrev.halloween::after{content:"🦇 🦇";position:absolute;left:14%;top:14%;font-size:13px;filter:brightness(0)}
 .tPrev.navidad{background:linear-gradient(#0a1a33,#1b3a5c);box-shadow:inset 0 -18px 0 #e8f2ff}
+/* aviso de actualización automática */
+.actualiza{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:rgba(3,4,10,.88);backdrop-filter:blur(6px);animation:mFondo .3s both}
+.actualiza>div{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.actualiza b{font-family:Orbitron;font-size:18px;letter-spacing:.08em;color:#e6fdff;text-shadow:0 0 14px var(--c)}
+.actualiza small{color:#8ab;font-size:15px}
