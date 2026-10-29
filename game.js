@@ -140,12 +140,14 @@ const Audio5 = (() => {
   // pausar todo el sonido cuando el juego no está en pantalla (otra app, botón de inicio, pantalla apagada)
   let oculto = false;
   function dormir() { oculto = true; if (ac && ac.state === 'running') ac.suspend().catch(() => {}); }
-  function despertar() { oculto = false; if (ac && ac.state === 'suspended') ac.resume().then(() => { nextT = Math.max(nextT, ac.currentTime + 0.05); }).catch(() => {}); }
+  let apagado = false;
+  function despertar() { if (apagado) return; oculto = false; if (ac && ac.state === 'suspended') ac.resume().then(() => { nextT = Math.max(nextT, ac.currentTime + 0.05); }).catch(() => {}); }
   document.addEventListener('visibilitychange', () => { if (document.hidden) dormir(); else despertar(); });
   window.addEventListener('pagehide', dormir);
   window.addEventListener('pageshow', () => { if (!document.hidden) despertar(); });
   return {
     init,
+    apagar() { apagado = true; dormir(); }, encender() { apagado = false; despertar(); },
     get snd() { return snd; }, get mus() { return musOn; },
     toggleSnd() { snd = !snd; store('snd', snd); if (master) master.gain.setTargetAtTime(snd ? 0.9 : 0, ac.currentTime, 0.05); return snd; },
     toggleMus() { musOn = !musOn; store('mus', musOn); if (mus) mus.gain.setTargetAtTime(musOn ? 0.32 : 0, ac.currentTime, 0.1); return musOn; },
@@ -516,7 +518,7 @@ function update(dt) {
   if (skyT < 1) { skyT = Math.min(1, skyT + rdt / 1.6); skyTop = mixHex(skyFrom[0], ZONAS[zona].top, skyT); skyBot = mixHex(skyFrom[1], ZONAS[zona].bot, skyT); if (skyT >= 1) { skyTop = ZONAS[zona].top; skyBot = ZONAS[zona].bot; } }
   if (layerFade < 1) { layerFade = Math.min(1, layerFade + rdt / 1.6); if (layerFade >= 1) prevLayers = null; }
 
-  if (state === 'menu' || state === 'load') { camX += 140 * rdt; updParts(rdt); return; }
+  if (state === 'menu' || state === 'load' || state === 'adios') { camX += 140 * rdt; updParts(rdt); return; }
   if (state === 'pause') return;
 
   // velocidad
@@ -1114,6 +1116,7 @@ function showBanner(a, b, col) {
 }
 function show(id, dim) {
   $$('.screen').forEach(s => s.classList.remove('show', 'dim'));
+  $('#btnCerrar').classList.toggle('oculto', id !== '#sMenu');
   if (id) { const s = $(id); s.classList.add('show'); if (dim) s.classList.add('dim'); }
 }
 /* Ventana de confirmación con el estilo del juego (sustituye a confirm()) */
@@ -1348,6 +1351,16 @@ window.addEventListener('blur', () => { holding = false; });
 window.addEventListener('resize', () => { resize(); });
 
 $('#btnJugar').onclick = startGame;
+/* ---- salir del juego ---- */
+$('#btnCerrar').onclick = () => {
+  confirma({ ico: '⏻', titulo: 'Salir del juego', html: '¿Seguro que quieres salir de <b>LUCASBOT 5G</b>?', si: 'Salir', no: 'Seguir jugando', peligro: true }).then(si => {
+    if (!si) return;
+    Audio5.apagar(); clearInterval(fraseTimer); state = 'adios';
+    try { window.close(); } catch (e) {}
+    setTimeout(() => { if (!document.hidden) show('#sAdios', true); }, 350);   // si el navegador no deja cerrar, pantalla de despedida
+  });
+};
+$('#btnVolverJuego').onclick = () => { Audio5.encender(); Audio5.click(); goMenu(); };
 $('#btnOtra').onclick = startGame;
 $('#btnRanking').onclick = openRanking;
 $('#btnFinRank').onclick = openRanking;
@@ -1668,7 +1681,7 @@ requestAnimationFrame(loop);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---- actualización automática: si hay una versión nueva, se recarga sola en el menú ---- */
-const VERSION = 32;   // subir este número (y version.json) en cada actualización
+const VERSION = 33;   // subir este número (y version.json) en cada actualización
 let nuevaVersion = 0, actualizando = false, ultVer = 0;
 function compruebaVersion(forzar) {
   if (actualizando || (!forzar && Date.now() - ultVer < 30000)) return; ultVer = Date.now();

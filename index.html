@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=24">
+<link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -30,6 +30,7 @@
 <!-- Botones fijos -->
 <button id="btnSonido" class="ico tl" aria-label="Sonido"></button>
 <button id="btnMusica" class="ico tl2" aria-label="Música"></button>
+<button id="btnCerrar" class="ico tr cerrar oculto" aria-label="Salir del juego"><svg viewBox="0 0 24 24"><path d="M12 3v8" fill="none" stroke-width="2.4" stroke-linecap="round"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0" fill="none" stroke-width="2.4" stroke-linecap="round"/></svg></button>
 <button id="btnPausa" class="ico tr oculto" aria-label="Pausa">
   <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
 </button>
@@ -98,6 +99,16 @@
       <div class="pws" id="ayudaPw"></div>
       <div class="ayudaBtns"><button class="btn jugar peq" data-cerrar>¡Entendido!</button><a class="btn sec webCreador" href="https://puntofibra.github.io/web/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg>Web del creador</a></div>
     </div>
+  </div>
+</section>
+
+<!-- Despedida (si el navegador no deja cerrar la pestaña) -->
+<section id="sAdios" class="screen">
+  <div class="card adios">
+    <img src="img/saluda.webp" alt="Lucas se despide" class="lucasImg media">
+    <h2>¡Hasta pronto!</h2>
+    <p>Lucas se queda esperándote. Ya puedes cerrar esta pestaña del navegador.</p>
+    <button id="btnVolverJuego" class="btn jugar peq">Volver al juego</button>
   </div>
 </section>
 
@@ -375,6 +386,6 @@
 </div>
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="game.js?v=32"></script>
+<script src="game.js?v=33"></script>
 </body>
 </html>

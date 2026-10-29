@@ -650,3 +650,9 @@ body.tema-halloween .btn.jugar{animation:shine 2.5s linear infinite,latidoH 1.6s
 .actualiza>div{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
 .actualiza b{font-family:Orbitron;font-size:18px;letter-spacing:.08em;color:#e6fdff;text-shadow:0 0 14px var(--c)}
 .actualiza small{color:#8ab;font-size:15px}
+/* botón y pantalla de salir */
+.ico.cerrar{border-color:rgba(255,92,122,.45)}
+.ico.cerrar svg{fill:none;stroke:#ff5c7a;filter:drop-shadow(0 0 4px #ff5c7a)}
+.card.adios{max-width:420px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+.card.adios .lucasImg{height:min(34vh,200px);width:auto}
+.card.adios p{color:#a9c4cc;font-size:16px}
