@@ -691,3 +691,36 @@ body.tema-navidad .logoWrap{filter:drop-shadow(0 0 12px rgba(255,210,63,.35))}
 .tPrev.navidad{background:radial-gradient(circle at 70% 35%,#eef7ff 0 13%,rgba(160,210,255,.35) 14%,transparent 24%),linear-gradient(#020617,#0b2447);box-shadow:inset 0 -18px 0 #eaf4ff}
 .tPrev.navidad i{position:absolute;left:0;right:0;bottom:18px;height:30px;background:repeating-linear-gradient(90deg,#0b1830 0 18px,transparent 18px 24px,#0e2040 24px 34px,transparent 34px 40px);border-top:3px dotted #ffd23f}
 body.tema-halloween .temaBadge.nv{display:none!important}
+
+/* ===== Tema Fallas ===== */
+.temaBadge.fa{display:none}
+body.tema-halloween .temaBadge.fa,body.tema-navidad .temaBadge.fa{display:none!important}
+body.tema-fallas{--v:#ffd23f;--c:#ff5a3a;--tx:#fff8ec}
+body.tema-fallas .temaBadge.fa{display:block;position:absolute;left:50%;bottom:2%;transform:translateX(-50%);z-index:4;white-space:nowrap;
+  font-family:Orbitron;font-weight:900;font-size:12px;letter-spacing:.14em;color:#fff;padding:6px 14px;border-radius:999px;
+  background:linear-gradient(90deg,#1d3f8a 0 14%,#ffd23f 14% 30%,#d81e1e 30% 44%,#ffd23f 44% 58%,#d81e1e 58% 72%,#ffd23f 72% 86%,#d81e1e 86%);text-shadow:0 0 6px #000,0 0 2px #000;
+  border:1px solid rgba(255,255,255,.6);box-shadow:0 0 18px rgba(255,140,40,.5);animation:temaFlota 3s ease-in-out infinite}
+body.tema-fallas .btn.jugar{color:#2a0700;background:repeating-linear-gradient(90deg,#ffd23f 0 26px,#e3241b 26px 52px);background-size:200% 100%;text-shadow:0 1px 0 rgba(255,255,255,.4);
+  box-shadow:0 0 24px rgba(255,140,40,.6),0 0 60px rgba(227,36,27,.25);animation:shine 5s linear infinite,latidoF 1.2s ease-in-out infinite}
+@keyframes latidoF{50%{box-shadow:0 0 34px rgba(255,210,63,.85),0 0 90px rgba(255,90,26,.4)}}
+body.tema-fallas .btn.sec{background:rgba(29,63,138,.25);border-color:rgba(255,210,63,.6);color:#fff3d6}
+body.tema-fallas .card{border-color:rgba(255,210,63,.4)}
+body.tema-fallas .halo{background:radial-gradient(circle,rgba(255,170,60,.28),rgba(255,60,40,.12) 50%,transparent 70%)!important}
+body.tema-fallas .titulo b{filter:hue-rotate(-140deg) saturate(1.4)}
+body.tema-fallas .logoWrap{filter:drop-shadow(0 0 12px rgba(255,170,60,.4))}
+@media (max-height:520px) and (orientation:landscape){body.tema-fallas .temaBadge.fa{font-size:9px;padding:4px 10px;bottom:1%}}
+.tPrev.fallas{background:radial-gradient(circle at 30% 30%,#ffd23f 0 3%,transparent 4%),radial-gradient(circle at 70% 25%,#ff4fd8 0 3%,transparent 4%),radial-gradient(circle at 70% 25%,rgba(255,79,216,.35) 0 14%,transparent 15%),radial-gradient(circle at 30% 30%,rgba(255,210,63,.35) 0 12%,transparent 13%),linear-gradient(#05030f,#2a0f22);box-shadow:inset 0 -18px 0 #1a0a12}
+.tPrev.fallas i{position:absolute;left:0;right:0;bottom:18px;height:30px;background:repeating-linear-gradient(90deg,#14081a 0 18px,transparent 18px 24px,#1a0c22 24px 34px,transparent 34px 40px);border-top:3px dotted #ffd23f}
+/* modo pruebas */
+label.pruebas{display:flex;align-items:center;gap:12px;padding:10px 12px;margin-bottom:12px;border-radius:14px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,210,63,.45);cursor:pointer}
+label.pruebas input{display:none}
+label.pruebas .sw{flex:0 0 46px;height:26px;border-radius:13px;background:rgba(255,255,255,.15);position:relative;transition:background .2s}
+label.pruebas .sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s}
+label.pruebas input:checked+.sw{background:#ffb000}
+label.pruebas input:checked+.sw::after{left:23px}
+label.pruebas b{display:block;color:#fff;font-size:15px}label.pruebas small{display:block;color:#9ab;font-size:13px}
+.tema.prueba{outline:3px dashed #ffb000;outline-offset:3px}
+.tema.prueba::before{content:"🧪 PROBANDO";position:absolute;top:16px;left:16px;z-index:2;font-family:Orbitron;font-size:10px;font-weight:900;letter-spacing:.08em;padding:3px 8px;border-radius:8px;background:#ffb000;color:#1a0d00}
+.marcaPruebas{display:none;position:fixed;z-index:26;top:calc(14px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);pointer-events:none;
+  font-family:Orbitron;font-size:10px;font-weight:900;letter-spacing:.1em;padding:4px 12px;border-radius:999px;background:rgba(255,176,0,.92);color:#1a0d00;box-shadow:0 0 14px rgba(255,176,0,.5)}
+body.pruebas .marcaPruebas{display:block}

@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=26">
+<link rel="stylesheet" href="style.css?v=27">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -60,7 +60,7 @@
     <div class="hero">
       <div class="bocadillo" id="bocadillo">¡Hola! Soy Lucas</div>
       <div class="halo"></div>
-      <div class="temaBadge hw">🎃 EDICIÓN HALLOWEEN 🦇</div><div class="temaBadge nv">🎄 EDICIÓN NAVIDAD ❄️</div>
+      <div class="temaBadge hw">🎃 EDICIÓN HALLOWEEN 🦇</div><div class="temaBadge nv">🎄 EDICIÓN NAVIDAD ❄️</div><div class="temaBadge fa">🔥 EDICIÓN FALLAS 🎆</div>
       <div class="heroLucas flota">
         <canvas id="heroFx"></canvas>
         <img id="heroImg" src="img/capa.webp" alt="Lucas con capa" class="lucasImg grande">
@@ -93,8 +93,8 @@
       <h2>Cómo se juega</h2>
       <ul class="ayuda">
         <li><b>Mantén pulsado</b> (pantalla, ratón o espacio) para que Lucas suba. Suelta para bajar.</li>
-        <li>Recoge <b class="v" data-hw="calabazas" data-nv="monedas de oro">datos</b> seguidos para hacer combos y multiplicar los puntos.</li>
-        <li>Esquiva <b class="r" data-hw="gusanos" data-nv="bastones de caramelo">láseres</b>, <b class="m" data-hw="murciélagos" data-nv="bolas malvadas">virus</b> y <b class="r" data-hw="cuchillos" data-nv="carámbanos">misiles</b>. Pasar rozando <span data-hw="un gusano" data-nv="un bastón">un láser</span> da puntos extra.</li>
+        <li>Recoge <b class="v" data-hw="calabazas" data-nv="monedas de oro" data-fa="buñuelos">datos</b> seguidos para hacer combos y multiplicar los puntos.</li>
+        <li>Esquiva <b class="r" data-hw="gusanos" data-nv="bastones de caramelo" data-fa="tracas">láseres</b>, <b class="m" data-hw="murciélagos" data-nv="bolas malvadas" data-fa="ninots y TNT">virus</b> y <b class="r" data-hw="cuchillos" data-nv="carámbanos" data-fa="cohetes">misiles</b>. Pasar rozando <span data-hw="un gusano" data-nv="un bastón" data-fa="una traca">un láser</span> da puntos extra.</li>
       </ul>
       <div class="pws" id="ayudaPw"></div>
       <div class="ayudaBtns"><button class="btn jugar peq" data-cerrar>¡Entendido!</button><a class="btn sec webCreador" href="https://puntofibra.github.io/web/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg>Web del creador</a></div>
@@ -217,6 +217,7 @@
   <div class="itemInfo oculto" id="itemInfo"><img alt=""><div><b></b><code></code><small></small></div></div>
 </section>
 
+<div class="marcaPruebas">🧪 MODO PRUEBAS · solo tú ves este tema</div>
 <div class="actualiza oculto" id="actualiza"><div><div class="tSpin"></div><b>¡Nueva versión de LUCASBOT!</b><small>Actualizando…</small></div></div>
 <div class="modal oculto" id="modal" role="dialog" aria-modal="true"><div class="mCaja"><div class="mIco" id="mIco"></div><h3 id="mTit"></h3><div class="mTxt" id="mTxt"></div><div class="mBtns"><button class="btn ter" id="mNo">Cancelar</button><button class="btn jugar peq" id="mSi">Aceptar</button></div></div></div>
 <div class="tAviso oculto" id="tAviso"><span class="tIco">⇄</span><div><b id="tAvisoTit"></b><small id="tAvisoTxt"></small></div><button class="btn jugar mini" id="tAvisoVer">Ver</button><button class="tX" id="tAvisoNo">✕</button></div>
@@ -275,10 +276,12 @@
         </div>
         <div class="admTab" data-t="temas">
           <h3>Tema del juego <small>(cambia el aspecto del juego para todos los jugadores)</small></h3>
+          <label class="pruebas"><input type="checkbox" id="chkPruebas"><span class="sw"></span><span><b>Modo pruebas</b><small id="pruebasTxt"></small></span></label>
           <div class="temas" id="admTemas">
             <button class="tema" data-tema="normal"><span class="tPrev normal"><i></i></span><b>Normal</b><small>Ciudad neón de Futurmovil</small><em>ACTIVO</em></button>
             <button class="tema" data-tema="halloween"><span class="tPrev halloween"><i></i></span><b>Halloween</b><small>Murciélagos, gusanos, cuchillos y calabazas</small><em>ACTIVO</em></button>
             <button class="tema" data-tema="navidad"><span class="tPrev navidad"><i></i></span><b>Navidad</b><small>Nieve, bastones de caramelo, bolas malvadas y monedas de oro</small><em>ACTIVO</em></button>
+            <button class="tema" data-tema="fallas"><span class="tPrev fallas"><i></i></span><b>Fallas</b><small>Mascletà, tracas, ninots, TNT, cohetes y buñuelos</small><em>ACTIVO</em></button>
           </div>
           <p class="admNota">Los jugadores que estén en el menú lo verán cambiar en menos de un minuto; los que estén jugando, al terminar la partida.</p>
         </div>
@@ -387,6 +390,6 @@
 </div>
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="game.js?v=34"></script>
+<script src="game.js?v=35"></script>
 </body>
 </html>

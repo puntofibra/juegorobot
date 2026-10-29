@@ -81,7 +81,7 @@ const Audio5 = (() => {
   let musMode = 'menu';
   function sched() {
     if (!ac) return;
-    while (nextT < ac.currentTime + 0.12) { const tm = typeof TEMA !== 'undefined' ? TEMA : 'normal'; if (tm === 'halloween') playStepH(step, nextT); else if (tm === 'navidad') playStepN(step, nextT); else playStep(step, nextT); nextT += tm === 'halloween' ? S16H : tm === 'navidad' ? S16N : S16; step = (step + 1) % 256; }
+    while (nextT < ac.currentTime + 0.12) { const tm = typeof TEMA !== 'undefined' ? TEMA : 'normal'; if (tm === 'halloween') playStepH(step, nextT); else if (tm === 'navidad') playStepN(step, nextT); else if (tm === 'fallas') playStepF(step, nextT); else playStep(step, nextT); nextT += tm === 'halloween' ? S16H : tm === 'navidad' ? S16N : tm === 'fallas' ? S16F : S16; step = (step + 1) % 256; }
   }
   function playStep(s, t) {
     if (!musOn || !snd) return;
@@ -146,6 +146,45 @@ const Audio5 = (() => {
     if (st % 4 === 0) tone(140, 0.2, 'sine', 0.5, 0.3, dly, mus);                         // bombo
     if (st % 8 === 4) { noise(0.14, 0.24, 3500, 1000, 'bandpass', dly, mus); noise(0.05, 0.12, 6000, 3000, 'bandpass', dly + 0.012, mus); }   // palmas
   }
+  // ---- música de Fallas: pasodoble de dolçaina y tabalet (melodía original) + petardos ----
+  const S16F = 60 / 118 / 4;
+  // melodía en corcheas por compás (0 = silencio, -1 = mantener): Rem · La7 · Rem · La7 · Solm · Rem · La7 · Rem
+  const melF = [
+    [74, 0, 74, 76, 77, 76, 74, 72], [73, 0, 73, 74, 76, 74, 73, 69], [74, 0, 74, 76, 77, 79, 81, 79], [77, 76, 74, 73, 76, -1, 0, 0],
+    [79, 0, 79, 77, 76, 74, 72, 70], [69, 0, 74, 72, 70, 69, 67, 65], [64, 65, 67, 69, 70, 69, 67, 61], [62, -1, -1, 0, 69, 0, 62, 0]];
+  const acF = [[38, [62, 65, 69]], [33, [61, 64, 67]], [38, [62, 65, 69]], [33, [61, 64, 67]], [43, [62, 67, 70]], [38, [62, 65, 69]], [33, [61, 64, 67]], [38, [62, 65, 69]]];
+  const tabalet = [1, 0, 0, .6, 1, 0, .6, 0, 1, 0, 0, .6, 1, .5, .7, .9];
+  function petardo(dly, v) { noise(0.32, v, 2600, 70, 'lowpass', dly, mus); tone(70, 0.25, 'sine', v * .9, 0.4, dly, mus); noise(0.05, v * .7, 7000, 3000, 'highpass', dly, mus); }
+  function dolcaina(n, dly, dur, v) {   // instrumento de lengüeta: cuadrada + sierra con vibrato ligero
+    if (!ac) return; const t = ac.currentTime + dly;
+    const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter(), l = ac.createOscillator(), lg = ac.createGain();
+    o.type = 'square'; o2.type = 'sawtooth'; o.frequency.value = o2.frequency.value = mtof(n); o2.detune.value = 6;
+    l.frequency.value = 6; lg.gain.value = mtof(n) * .008; l.connect(lg); lg.connect(o.frequency); lg.connect(o2.frequency);
+    f.type = 'bandpass'; f.frequency.value = mtof(n) * 2.2; f.Q.value = .9;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + .02); g.gain.setValueAtTime(v * .85, t + dur * .7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(f); o2.connect(f); f.connect(g); g.connect(mus); [o, o2, l].forEach(x => { x.start(t); x.stop(t + dur + .05); });
+  }
+  function playStepF(s, t) {
+    if (!musOn || !snd) return;
+    const bar = Math.floor(s / 16) % 8, st = s % 16, ch = acF[bar], dly = t - ac.currentTime, juego = musMode === 'game';
+    // dolçaina
+    if (st % 2 === 0) { const n = melF[bar][st / 2]; if (n > 0) { let d = 1; while (st / 2 + d < 8 && melF[bar][st / 2 + d] === -1) d++; dolcaina(n, dly, S16F * 2 * d * .92, juego ? 0.05 : 0.06); } }
+    // tabalet (caja valenciana)
+    const tb = tabalet[st]; if (tb) noise(0.07, (juego ? 0.16 : 0.11) * tb, 2600, 1200, 'bandpass', dly, mus);
+    if (bar % 4 === 3 && st >= 12) noise(0.05, 0.12, 3000, 1500, 'bandpass', dly + S16F / 2, mus);   // redoble
+    // bajo de pasodoble (bombardino): un-pa
+    if (st % 4 === 0) tone(mtof(ch[0] - (st % 8 === 4 ? -7 : 0)), S16F * 2.2, 'sawtooth', juego ? 0.09 : 0.07, 0, dly, mus);
+    if (st % 4 === 2) ch[1].forEach(m => tone(mtof(m - 12), S16F * 1.2, 'square', 0.013, 0, dly, mus));
+    if (!juego) { if (s % 64 === 48) for (let k = 0; k < 6; k++) noise(0.04, 0.03, 9000, 5000, 'highpass', dly + k * 0.07 + Math.random() * .04, mus); return; }   // petardeo lejano
+    // en partida: bombo y petardos de mascletà que crecen con la intensidad
+    if (st % 4 === 0) tone(110, 0.2, 'sine', 0.45, 0.35, dly, mus);
+    if ((st === 7 || st === 15) && Math.random() < .35 + intensity * .4) petardo(dly, 0.22 + intensity * .1);
+  }
+  function mascleta() {   // ráfaga de petardos que acelera, como el final de una mascletà
+    if (!ac || !snd) return; let d = 0, paso = .26;
+    for (let k = 0; k < 26; k++) { petardo(d, .3 + Math.random() * .15); d += paso; paso = Math.max(.045, paso * .88); }
+    for (let k = 0; k < 5; k++) petardo(d + k * .03, .45);
+  }
   function playStepH(s, t) {
     if (!musOn || !snd) return;
     const bar = Math.floor(s / 16) % 4, st = s % 16, ch = progH[bar], dly = t - ac.currentTime, juego = musMode === 'game';
@@ -173,7 +212,7 @@ const Audio5 = (() => {
   window.addEventListener('pageshow', () => { if (!document.hidden) despertar(); });
   return {
     init,
-    apagar() { apagado = true; dormir(); }, encender() { apagado = false; despertar(); },
+    apagar() { apagado = true; dormir(); }, encender() { apagado = false; despertar(); }, mascleta() { mascleta(); },
     get snd() { return snd; }, get mus() { return musOn; },
     toggleSnd() { snd = !snd; store('snd', snd); if (master) master.gain.setTargetAtTime(snd ? 0.9 : 0, ac.currentTime, 0.05); return snd; },
     toggleMus() { musOn = !musOn; store('mus', musOn); if (mus) mus.gain.setTargetAtTime(musOn ? 0.32 : 0, ac.currentTime, 0.1); return musOn; },
@@ -235,7 +274,8 @@ const ZONAS = [
   { n: 'SERVIDOR CENTRAL', a: '#ffd23f', b: '#19ff6a', top: '#0b0702', bot: '#2a1a05', sun1: '#ffd23f', sun2: '#ff6a2b' }
 ];
 /* ---- temas (se activan desde el panel admin) ---- */
-let TEMA = load('tema', 'normal');
+let TEMA_PRUEBA = load('temaPrueba', null);   // modo pruebas del admin: tema solo en este dispositivo
+let TEMA = TEMA_PRUEBA || load('tema', 'normal'), TEMA_SERVIDOR = load('tema', 'normal');
 const ZONAS_N = ZONAS.map(z => Object.assign({}, z));
 const ZONAS_H = [
   { n: 'CEMENTERIO DIGITAL', a: '#ff7a1a', b: '#b14bff', top: '#020104', bot: '#1d0a1c', sun1: '#ffe7a3', sun2: '#ff8a1f' },
@@ -249,12 +289,20 @@ const ZONAS_X = [
   { n: 'TALLER DE SANTA', a: '#ffd23f', b: '#ff3b4e', top: '#0a0408', bot: '#2b0d17', sun1: '#fff6e0', sun2: '#ffcf7a' },
   { n: 'AURORA BOREAL', a: '#7af0ff', b: '#c77dff', top: '#020415', bot: '#16123d', sun1: '#eef9ff', sun2: '#a8e6ff' }
 ];
-const HW = () => TEMA === 'halloween', NV = () => TEMA === 'navidad';
+const ZONAS_F = [
+  { n: 'PLAZA DEL AYUNTAMIENTO', a: '#ffd23f', b: '#ff3b3b', top: '#05030f', bot: '#2a0f22', sun1: '#fff1c9', sun2: '#ffb347' },
+  { n: 'LUCES DE RUZAFA', a: '#ff4fd8', b: '#ffd23f', top: '#070214', bot: '#2b0b3a', sun1: '#ffe9ff', sun2: '#ff8ae0' },
+  { n: 'NIT DEL FOC', a: '#4ab8ff', b: '#ffd23f', top: '#020414', bot: '#14204a', sun1: '#eaf6ff', sun2: '#8fd0ff' },
+  { n: 'LA CREMÀ', a: '#ff5a1a', b: '#ffd23f', top: '#0a0302', bot: '#3a0e04', sun1: '#ffe3b0', sun2: '#ff6a1a' }
+];
+const HW = () => TEMA === 'halloween', NV = () => TEMA === 'navidad', FA = () => TEMA === 'fallas';
 const OJOS_POS = {}, tumbasC = {};
 let arbolesC = null, calSprG = null, lamparas = null, nieblaTira = null;   // cachés del modo Halloween
 const LUCES_POS = {}, NIEVE_TOP = {};
+let genteC = null, bunSpr = null, humoTira = null, mascletaT = 0;
+const fuegos = [];   // cachés del modo Fallas
 let pinosC = null, regalosC = null, guirnaldaC = null, monedaSpr = null, bombillas = null, copos = null;   // cachés del modo Navidad
-function paletaTema() { (HW() ? ZONAS_H : NV() ? ZONAS_X : ZONAS_N).forEach((z, i) => Object.assign(ZONAS[i], z)); }
+function paletaTema() { (HW() ? ZONAS_H : NV() ? ZONAS_X : FA() ? ZONAS_F : ZONAS_N).forEach((z, i) => Object.assign(ZONAS[i], z)); }
 paletaTema();
 let zona = 0, layers = null, prevLayers = null, layerFade = 1;
 let skyTop = ZONAS[0].top, skyBot = ZONAS[0].bot, skyFrom = null, skyT = 1;
@@ -269,7 +317,9 @@ function artLayer(name, h, z, R) {
   const c = off(w * R, h * R), g = c.getContext('2d');
   g.drawImage(im, 0, 0, c.width, c.height);
   g.globalCompositeOperation = 'source-atop';
-  if (NV()) {   // Navidad: noche fría azulada
+  if (FA()) {   // Fallas: noche de fiesta, cálida
+    g.fillStyle = name === 'altos' ? 'rgba(70,18,40,.55)' : 'rgba(60,16,24,.42)'; g.fillRect(0, 0, c.width, c.height);
+  } else if (NV()) {   // Navidad: noche fría azulada
     g.fillStyle = name === 'altos' ? 'rgba(8,22,56,.42)' : 'rgba(6,16,40,.30)'; g.fillRect(0, 0, c.width, c.height);
   } else if (HW()) {   // Halloween: edificios en silueta negra con sombras
     const sg = g.createLinearGradient(0, 0, 0, c.height);
@@ -286,10 +336,11 @@ function artLayer(name, h, z, R) {
   if (gl && gl.complete && gl.naturalWidth && !HW()) {
     lc = off(w * R, h * R); const lg = lc.getContext('2d');
     lg.drawImage(gl, 0, 0, lc.width, lc.height);
-    if (NV()) { lg.globalCompositeOperation = 'source-atop'; lg.fillStyle = 'rgba(255,196,90,.9)'; lg.fillRect(0, 0, lc.width, lc.height); }   // ventanas cálidas
+    if (NV() || FA()) { lg.globalCompositeOperation = 'source-atop'; lg.fillStyle = FA() ? 'rgba(255,170,70,.9)' : 'rgba(255,196,90,.9)'; lg.fillRect(0, 0, lc.width, lc.height); }   // ventanas cálidas
     else if (z > 0 || HW()) { lg.globalCompositeOperation = 'source-atop'; lg.fillStyle = rgba(p.a, HW() ? .45 : .85); lg.fillRect(0, 0, lc.width, lc.height); }
   }
   if (NV()) nieveTejados(g, name, im, w, h, R);
+  if (FA() && name === 'altos') { const ha = GROUND * .5; g.save(); g.globalCompositeOperation = 'source-over'; g.setTransform(R, 0, 0, R, 0, (h - ha) * R); dibujaArcos(g, w, ha); g.restore(); }
   return Object.assign({ c, lc, w, h }, HW() ? ojosCapa(name, im, w, h) : NV() ? lucesCapa(name, im, w, h) : {});
 }
 function drawArt(Lr, par, t, glowA) {
@@ -322,6 +373,7 @@ function buildLayers(z) {
   L.bajos = artLayer('bajos', GROUND * 0.27, z, R);
   if (HW()) { L.arboles = capaArboles(R); L.tumbas = capaTumbas(R, z); }
   if (NV()) { L.arboles = capaPinos(R); L.tumbas = capaRegalos(R); }
+  if (FA()) { L.tumbas = capaGente(R); }
   return L;
 }
 /* prepara la zona siguiente en trocitos (un trozo por fotograma) para que el cambio de zona no dé tirones */
@@ -331,7 +383,7 @@ function prepZona(z) {
   zonaPrep = z; const R = S * DPR, L = { z, R }, pasos = [
     () => L.altos = artLayer('altos', GROUND * 0.6, z, R),
     () => L.bajos = artLayer('bajos', GROUND * 0.27, z, R),
-    () => { if (HW()) { L.arboles = capaArboles(R); L.tumbas = capaTumbas(R, z); } if (NV()) { L.arboles = capaPinos(R); L.tumbas = capaRegalos(R); } L.ant = []; }];
+    () => { if (HW()) { L.arboles = capaArboles(R); L.tumbas = capaTumbas(R, z); } if (NV()) { L.arboles = capaPinos(R); L.tumbas = capaRegalos(R); } if (FA()) { L.tumbas = capaGente(R); } L.ant = []; }];
   const sig = () => { if (zonaPrep !== z) return; const f = pasos.shift(); if (f) { f(); setTimeout(sig, 30); } else { zonaLista = L; zonaPrep = -1; } };
   setTimeout(sig, 0);
 }
@@ -573,7 +625,7 @@ function update(dt) {
   // zonas
   const zn = Math.floor(meters / 800);
   if (state === 'play' && meters % 800 > 560) prepZona((zn + 1) % ZONAS.length);
-  if (state === 'play' && zn !== lastZone) { lastZone = zn; setZone(zn % ZONAS.length); showBanner('ZONA ' + (zn + 1), ZONAS[zn % ZONAS.length].n, ZONAS[zn % ZONAS.length].a); Audio5.zone(); }
+  if (state === 'play' && zn !== lastZone) { lastZone = zn; setZone(zn % ZONAS.length); showBanner('ZONA ' + (zn + 1), ZONAS[zn % ZONAS.length].n, ZONAS[zn % ZONAS.length].a); if (FA()) { Audio5.mascleta(); mascletaT = 2.2; } else Audio5.zone(); }
   Audio5.setIntensity(clamp(meters / 3000, 0, 1) + (pw.turbo > 0 ? .5 : 0));
 
   // Lucas
@@ -621,7 +673,7 @@ function update(dt) {
     if (Math.max(e[0], e[2]) < camX - 120) { lasers.splice(i, 1); continue; }
     if (state !== 'play' || l.dead) continue;
     const d = nearest((x, y) => segDist(x, y, e[0], e[1], e[2], e[3]));
-    if (d < 4) { hit(px, py, () => { l.dead = true; for (let k = 0; k <= 10; k++) burst(lerp(e[0], e[2], k / 10), lerp(e[1], e[3], k / 10), HW() ? '#9dff3a' : NV() ? '#ffffff' : '#ff2b4e', 4, 260); lasers.splice(i, 1); }); if (L.dead) return; continue; }
+    if (d < 4) { hit(px, py, () => { l.dead = true; for (let k = 0; k <= 10; k++) burst(lerp(e[0], e[2], k / 10), lerp(e[1], e[3], k / 10), HW() ? '#9dff3a' : NV() ? '#ffffff' : FA() ? '#ffd23f' : '#ff2b4e', 4, 260); lasers.splice(i, 1); }); if (L.dead) return; continue; }
     if (Math.abs(px - l.x) < l.len / 2 + 60) l.min = Math.min(l.min, d);
     if (!l.done && Math.max(e[0], e[2]) < px - 70) {
       l.done = true;
@@ -636,8 +688,8 @@ function update(dt) {
     const v = viruses[i]; v.ph += dt * v.sp; v.rot += dt * 2; v.y = v.y0 + Math.sin(v.ph) * v.amp; v.x -= 70 * dt;
     if (v.x < camX - 100) { viruses.splice(i, 1); continue; }
     if (state !== 'play') continue;
-    if (Math.random() < .3) P(v.x + rnd(-10, 10), v.y + rnd(-10, 10), rnd(20, 80), rnd(-30, 30), .4, rnd(4, 8), HW() ? '#7a1fd6' : NV() ? '#ffd23f' : '#ff2bd6', 'glow');
-    if (nearest((x, y) => Math.hypot(x - v.x, y - v.y)) < 21) { hit(v.x, v.y, () => { burst(v.x, v.y, HW() ? '#b14bff' : NV() ? '#ff3b4e' : '#ff2bd6', 30, 500); viruses.splice(i, 1); }); if (L.dead) return; }
+    if (Math.random() < .3) P(v.x + rnd(-10, 10), v.y + rnd(-10, 10), rnd(20, 80), rnd(-30, 30), .4, rnd(4, 8), HW() ? '#7a1fd6' : NV() ? '#ffd23f' : FA() ? '#ff8a1f' : '#ff2bd6', 'glow');
+    if (nearest((x, y) => Math.hypot(x - v.x, y - v.y)) < 21) { hit(v.x, v.y, () => { burst(v.x, v.y, HW() ? '#b14bff' : NV() ? '#ff3b4e' : FA() ? '#ffb347' : '#ff2bd6', 30, 500); viruses.splice(i, 1); }); if (L.dead) return; }
   }
   // avisos de misil
   for (let i = warns.length - 1; i >= 0; i--) {
@@ -774,9 +826,11 @@ function render() {
   drawMoon(t);
   if (HW()) drawBandada(t);
   if (NV()) drawTrineo(t);
+  if (FA()) drawFuegos(t);
   drawLayerSet(prevLayers, 1 - layerFade, t); drawLayerSet(layers, prevLayers ? layerFade : 1, t);
   if (HW()) drawNiebla(t);
   if (NV()) drawNieve(t, 0);
+  if (FA()) drawHumo(t);
 
   // neblina en el horizonte
   const z = ZONAS[zona];
@@ -826,13 +880,14 @@ function drawMoon(t) {
   g.fillStyle = sh; g.beginPath(); g.arc(c0, c0, rr * 1.03, 0, TAU); g.fill();
   g.fillStyle = 'rgba(8,14,32,.2)'; g.fillRect(0, 0, px, px);
   if (NV()) { g.fillStyle = 'rgba(160,205,255,.22)'; g.fillRect(0, 0, px, px); }
+  else if (FA()) { g.fillStyle = 'rgba(255,170,90,.2)'; g.fillRect(0, 0, px, px); }
   else if (HW()) { g.fillStyle = rgba(ZONAS[zona].sun2, .38); g.fillRect(0, 0, px, px); g.fillStyle = 'rgba(255,240,200,.12)'; g.fillRect(0, 0, px, px); }
   else if (zona > 0) { g.fillStyle = rgba(ZONAS[zona].a, .09); g.fillRect(0, 0, px, px); }
   g.globalCompositeOperation = 'source-over';
   }
   const z = ZONAS[zona], pul = 1 + Math.sin(t * 1.4) * .05;
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = HW() ? .42 : NV() ? .34 : .28;
-  ctx.drawImage(glowSpr(HW() || NV() ? z.sun2 : z.a), cx - mr * 2.3 * pul, cy - mr * 2.3 * pul, mr * 4.6 * pul, mr * 4.6 * pul);
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = HW() ? .42 : NV() || FA() ? .34 : .28;
+  ctx.drawImage(glowSpr(HW() || NV() || FA() ? z.sun2 : z.a), cx - mr * 2.3 * pul, cy - mr * 2.3 * pul, mr * 4.6 * pul, mr * 4.6 * pul);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   ctx.drawImage(moonC, cx - size * .725, cy - size * .725, size * 1.45, size * 1.45);
   // borde iluminado
@@ -889,6 +944,7 @@ function drawCeil(z, t) {
   ctx.fillStyle = rgba(z.b, .8); ctx.fillRect(0, CEIL - 1, W, 2);
   const sp = 160, o = -(camX % sp);
   if (NV()) { drawGuirnalda(t); }
+  else if (FA()) { drawTraca(t); }
   else if (HW()) {
     ctx.globalCompositeOperation = 'source-over';
     if (!lamparas) { const c = off(sp * 2, 60 * 2), g = c.getContext('2d'); g.scale(2, 2); g.strokeStyle = 'rgba(160,140,170,.5)'; g.lineWidth = 1; g.beginPath(); g.moveTo(sp / 2, 0); g.lineTo(sp / 2, 16); g.stroke(); g.globalAlpha = .7; g.drawImage(glowSpr('#ff7a1a'), sp / 2 - 22, 4, 44, 44); g.globalAlpha = 1; g.drawImage(spriteCalabaza(), sp / 2 - 11, 15, 22, 22); lamparas = c; }
@@ -905,6 +961,7 @@ function drawCoins(t) {
     const s = Math.cos(t * 4 + c.ph + c.x * .004); const w = Math.max(.15, Math.abs(s));
     if (HW()) { const b = Math.sin(t * 5 + c.ph) * 2.5, k = .8 + .2 * w; ctx.drawImage(spriteCalabazaG(), c.x - 30 * k, c.y - 30 + b, 60 * k, 60); }
     else if (NV()) ctx.drawImage(spriteMoneda(), c.x - 30 * w, c.y - 30, 60 * w, 60);
+    else if (FA()) { const k = .78 + .22 * w; ctx.drawImage(spriteBunuelo(), c.x - 30 * k, c.y - 30, 60 * k, 60); }
     else ctx.drawImage(coinSpr, c.x - 32 * w, c.y - 32, 64 * w, 64);
   }
 }
@@ -926,6 +983,7 @@ function drawLasers(t) {
     const e = laserEnds(l); if (Math.max(e[0], e[2]) < camX - 40 || Math.min(e[0], e[2]) > camX + W + 40) continue;
     if (HW()) { drawGusano(e, l, t); continue; }
     if (NV()) { drawBaston(e, l, t); continue; }
+    if (FA()) { drawRistra(e, l, t); continue; }
     const fl = .85 + Math.random() * .15;
     ctx.globalCompositeOperation = 'lighter';
     [[26, .1], [14, .25], [6, .7]].forEach(([w, a]) => { ctx.strokeStyle = `rgba(255,43,78,${a * fl})`; ctx.lineWidth = w + Math.sin(t * 20 + l.ph) * 1.5; ctx.beginPath(); ctx.moveTo(e[0], e[1]); ctx.lineTo(e[2], e[3]); ctx.stroke(); });
@@ -946,6 +1004,7 @@ function drawViruses(t) {
   for (const v of viruses) {
     if (HW()) { drawMurcielago(v, t); continue; }
     if (NV()) { drawBolaMala(v, t); continue; }
+    if (FA()) { if (Math.floor(Math.abs(v.y0) / 41) % 2) drawTNT(v, t); else drawNinot(v, t); continue; }
     ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowSpr('#ff2bd6'), v.x - 50, v.y - 50, 100, 100); ctx.globalCompositeOperation = 'source-over';
     ctx.save(); ctx.translate(v.x, v.y); ctx.rotate(v.rot);
     ctx.strokeStyle = '#ff7be6'; ctx.lineWidth = 3; ctx.fillStyle = '#ff7be6';
@@ -965,6 +1024,7 @@ function drawMissiles(t) {
   for (const m of missiles) {
     if (HW()) { drawCuchillo(m, t); continue; }
     if (NV()) { drawCarambano(m, t); continue; }
+    if (FA()) { drawCohete(m, t); continue; }
     ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowSpr('#ff8a2b'), m.x + 10, m.y - 30, 70, 60); ctx.globalCompositeOperation = 'source-over';
     ctx.save(); ctx.translate(m.x, m.y);
     const g = ctx.createLinearGradient(0, -9, 0, 9); g.addColorStop(0, '#e8edf5'); g.addColorStop(1, '#6b768a');
@@ -1204,11 +1264,12 @@ function paintSnd() {
 const FRASES_N = ['¡Hola! Soy Lucas', 'Mantén pulsado para volar', 'Recoge datos y haz combos', 'Cuidado con los láseres', 'El turbo 5G lo arrasa todo', '¿Superas mi récord?', 'Futurmovil: fibra, móvil y TV'];
 const FRASES_H = ['¡Feliz Halloween!', '¿Truco o trato?', 'Cuidado con los murciélagos', 'Esquiva los gusanos', '¡Vienen cuchillos!', 'Recoge calabazas y haz combos', 'Futurmovil: fibra, móvil y TV'];
 const FRASES_X = ['¡Feliz Navidad!', 'Ho, ho, ho… ¡a volar!', 'Recoge monedas de oro', 'Cuidado con los bastones de caramelo', 'Las bolas de Navidad muerden', '¡Carámbanos a la vista!', 'Futurmovil: fibra, móvil y TV'];
-const FRASES = (TEMA === 'halloween' ? FRASES_H : TEMA === 'navidad' ? FRASES_X : FRASES_N).slice();
+const FRASES_F = ['¡Bones Falles!', '¡Que empiece la mascletà!', 'Cuidado con las tracas', '¡Cohetes a la vista!', 'Recoge buñuelos', '¡Visca les Falles!', 'Futurmovil: fibra, móvil y TV'];
+const FRASES = (TEMA === 'halloween' ? FRASES_H : TEMA === 'navidad' ? FRASES_X : TEMA === 'fallas' ? FRASES_F : FRASES_N).slice();
 let fraseI = 0, fraseTimer;
 function goMenu() {
   state = 'menu'; L.vis = false; Audio5.mode('menu'); Audio5.thrustOff();
-  if (temaPendiente) aplicaTema(temaPendiente);
+  if (temaPendiente) aplicaTema(temaPendiente, false, true);
   $('#hud').classList.add('oculto'); $('#btnPausa').classList.add('oculto');
   pintaCuenta(); $('#cuenta').innerHTML = ''; cargaHoy();
   show('#sMenu');
@@ -1745,7 +1806,7 @@ requestAnimationFrame(loop);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---- actualización automática: si hay una versión nueva, se recarga sola en el menú ---- */
-const VERSION = 34;   // subir este número (y version.json) en cada actualización
+const VERSION = 35;   // subir este número (y version.json) en cada actualización
 let nuevaVersion = 0, actualizando = false, ultVer = 0;
 function compruebaVersion(forzar) {
   if (actualizando || (!forzar && Date.now() - ultVer < 30000)) return; ultVer = Date.now();
@@ -2020,14 +2081,26 @@ setInterval(intentaActualizar, 3000);   // si llegó durante una partida, se apl
   }
 
   /* ---- temas ---- */
-  function pintaTemas() { const act = (ADMD && ADMD.tema) || 'normal'; $$('#admTemas .tema[data-tema]').forEach(b => b.classList.toggle('on', b.dataset.tema === act)); }
+  function pintaTemas() {
+    const act = (ADMD && ADMD.tema) || 'normal';
+    $$('#admTemas .tema[data-tema]').forEach(b => { b.classList.toggle('on', b.dataset.tema === act); b.classList.toggle('prueba', !!TEMA_PRUEBA && b.dataset.tema === TEMA_PRUEBA); });
+    $('#chkPruebas').checked = !!TEMA_PRUEBA;
+    $('#pruebasTxt').textContent = TEMA_PRUEBA ? 'Estás probando un tema solo en este dispositivo. Los jugadores siguen viendo el tema marcado como ACTIVO.' : 'Actívalo para probar un tema solo tú, sin que lo vean los jugadores.';
+  }
+  $('#chkPruebas').onchange = e => {
+    if (e.target.checked) { TEMA_PRUEBA = TEMA; store('temaPrueba', TEMA_PRUEBA); toast('Modo pruebas activado: los cambios de tema solo los verás tú'); }
+    else { TEMA_PRUEBA = null; store('temaPrueba', null); aplicaTema((ADMD && ADMD.tema) || TEMA_SERVIDOR, false, true); toast('Modo pruebas desactivado: vuelves a ver lo mismo que los jugadores'); }
+    document.body.classList.toggle('pruebas', !!TEMA_PRUEBA); Audio5.click(); pintaTemas();
+  };
   $$('#admTemas .tema[data-tema]').forEach(b => b.onclick = () => {
-    const t = b.dataset.tema; if (ADMD && ADMD.tema === t) return;
-    const NOMS = { normal: ['Normal', '🤖'], halloween: ['Halloween', '🎃'], navidad: ['Navidad', '🎄'] }, nom = NOMS[t][0] + ' ' + NOMS[t][1];
+    const t = b.dataset.tema;
+    if (TEMA_PRUEBA) { TEMA_PRUEBA = t; store('temaPrueba', t); aplicaTema(t, false, true); pintaTemas(); Audio5.click(); toast('Probando el tema ' + b.querySelector('b').textContent + ' (solo tú)'); return; }
+    if (ADMD && ADMD.tema === t) return;
+    const NOMS = { normal: ['Normal', '🤖'], halloween: ['Halloween', '🎃'], navidad: ['Navidad', '🎄'], fallas: ['Fallas', '🔥'] }, nom = NOMS[t][0] + ' ' + NOMS[t][1];
     confirma({ ico: NOMS[t][1], titulo: 'Cambiar tema', si: 'Activar ' + NOMS[t][0], no: 'Cancelar',
       html: `El juego pasará a modo <b>${nom}</b> para todos los jugadores.` }).then(si => {
       if (!si) return;
-      adm('tema', { tema: t }).then(d => { if (!d.ok) return toast(d.error || 'No se pudo cambiar'); ADMD.tema = t; pintaTemas(); aplicaTema(t); toast('Tema ' + nom + ' activado'); Audio5.record(); });
+      adm('tema', { tema: t }).then(d => { if (!d.ok) return toast(d.error || 'No se pudo cambiar'); ADMD.tema = t; aplicaTema(t); pintaTemas(); toast('Tema ' + nom + ' activado para todos'); Audio5.record(); });
     });
   });
 
@@ -2784,23 +2857,240 @@ function drawCarambano(m, t) {
   if (Math.random() < .35) P(m.x + rnd(20, 40), m.y + rnd(-8, 8), rnd(60, 160), rnd(-20, 20), .5, rnd(1.5, 3), '#dff2ff', 'glow');
 }
 
+
+/* =========================================================
+   MODO FALLAS · escenario, fuegos y enemigos
+   ========================================================= */
+// arcos de luces estilo Ruzafa + falla monumental (capa intermedia)
+function dibujaArcos(g, ancho, h) {
+  const cols = ['#ffd23f', '#ffffff', '#ff4fd8', '#4ab8ff', '#ff5a3a'];
+  const punto = (x, y, col, r) => { g.globalAlpha = .55; g.drawImage(glowSpr(col), x - r * 4, y - r * 4, r * 8, r * 8); g.globalAlpha = 1; g.fillStyle = '#fff8e0'; g.beginPath(); g.arc(x, y, r * .7, 0, TAU); g.fill(); };
+  // falla monumental en el centro del tramo
+  const fx = ancho * .55, fb = h, esc = Math.min(1, h / 280);
+  g.save(); g.translate(fx, fb); g.scale(esc, esc); g.translate(-fx, -fb);
+  g.fillStyle = '#1d3f8a'; g.fillRect(fx - 90, fb - 40, 180, 40); g.fillStyle = '#f4f1e8'; g.fillRect(fx - 90, fb - 40, 180, 6); g.fillStyle = '#ffd23f'; for (let k = 0; k < 9; k++) g.fillRect(fx - 84 + k * 20, fb - 26, 10, 10);
+  g.fillStyle = '#c23b2a'; g.fillRect(fx - 60, fb - 70, 120, 30); g.fillStyle = '#ffd23f'; g.fillRect(fx - 60, fb - 70, 120, 4);
+  // ninot gigante
+  const nx = fx, ny = fb - 70;
+  g.fillStyle = '#2f8f5a'; g.beginPath(); g.moveTo(nx - 36, ny); g.quadraticCurveTo(nx - 44, ny - 80, nx - 18, ny - 118); g.lineTo(nx + 18, ny - 118); g.quadraticCurveTo(nx + 44, ny - 80, nx + 36, ny); g.closePath(); g.fill();
+  g.fillStyle = '#ffd23f'; g.fillRect(nx - 30, ny - 64, 60, 6);
+  g.strokeStyle = '#f2c9a0'; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(nx - 26, ny - 100); g.quadraticCurveTo(nx - 64, ny - 112, nx - 74, ny - 146); g.moveTo(nx + 26, ny - 100); g.quadraticCurveTo(nx + 66, ny - 92, nx + 80, ny - 128); g.stroke();
+  g.fillStyle = '#f2c9a0'; g.beginPath(); g.arc(nx, ny - 150, 34, 0, TAU); g.fill();
+  g.fillStyle = '#e8463a'; g.beginPath(); g.ellipse(nx + 14, ny - 146, 16, 11, .2, 0, TAU); g.fill();   // narizota
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(nx - 10, ny - 160, 9, 0, TAU); g.arc(nx + 12, ny - 162, 9, 0, TAU); g.fill();
+  g.fillStyle = '#111'; g.beginPath(); g.arc(nx - 7, ny - 159, 4, 0, TAU); g.arc(nx + 15, ny - 161, 4, 0, TAU); g.fill();
+  g.strokeStyle = '#7a2a1a'; g.lineWidth = 3; g.beginPath(); g.arc(nx + 2, ny - 136, 13, .25, Math.PI - .25); g.stroke();
+  g.fillStyle = '#222'; g.beginPath(); g.ellipse(nx, ny - 182, 40, 8, 0, 0, TAU); g.fill(); g.fillRect(nx - 22, ny - 210, 44, 28);   // sombrero
+  g.fillStyle = '#e8463a'; g.fillRect(nx - 22, ny - 192, 44, 6);
+  // ninots pequeños alrededor
+  [[-70, '#ff8ac7'], [70, '#7fd0ff']].forEach(([dx, col]) => { const bx = nx + dx; g.fillStyle = col; g.beginPath(); g.ellipse(bx, fb - 58, 12, 18, 0, 0, TAU); g.fill(); g.fillStyle = '#f2c9a0'; g.beginPath(); g.arc(bx, fb - 84, 11, 0, TAU); g.fill(); g.fillStyle = '#e8463a'; g.beginPath(); g.arc(bx + 6, fb - 83, 4, 0, TAU); g.fill(); });
+  // la falla queda en segundo plano (algo más oscura que los obstáculos)
+  g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(20,8,30,.42)'; g.fillRect(fx - 160, fb - 300, 320, 300); g.globalCompositeOperation = 'source-over';
+  g.restore();
+  // focos que iluminan la falla
+  const fg = g.createRadialGradient(fx, fb - 120, 10, fx, fb - 120, 170); fg.addColorStop(0, 'rgba(255,220,150,.22)'); fg.addColorStop(1, 'rgba(255,220,150,0)');
+  g.fillStyle = fg; g.fillRect(fx - 200, fb - 300, 400, 300);
+  // arcos de luces (Ruzafa)
+  const nA = Math.max(2, Math.round(ancho / 230)), pasoA = ancho / nA;
+  for (let a = 0; a < nA; a++) { const x0 = a * pasoA + (pasoA - 190) / 2;
+    if (Math.abs(x0 + 95 - fx) < 170) continue;
+    const w = 190, top = h * .06, base = h - 6, ci = Math.floor(x0 / 230);
+    g.strokeStyle = 'rgba(40,20,30,.8)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(x0, base); g.lineTo(x0, top + 40); g.moveTo(x0 + w, base); g.lineTo(x0 + w, top + 40); g.stroke();
+    for (let y = base; y > top + 40; y -= 11) { punto(x0, y, cols[(ci + 1) % 5], 1.6); punto(x0 + w, y, cols[(ci + 1) % 5], 1.6); }
+    for (let k = 0; k <= 26; k++) { const a = Math.PI + k / 26 * Math.PI, x = x0 + w / 2 + Math.cos(a) * w / 2, y = top + 40 + Math.sin(a) * 40; punto(x, y, cols[ci % 5], 1.8); }
+    for (let k = 0; k <= 18; k++) { const a = Math.PI + k / 18 * Math.PI, x = x0 + w / 2 + Math.cos(a) * w * .32, y = top + 52 + Math.sin(a) * 26; punto(x, y, cols[(ci + 2) % 5], 1.4); }
+    for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; punto(x0 + w / 2 + Math.cos(a) * 12, top + 8 + Math.sin(a) * 12, cols[(ci + 3) % 5], 1.3); }   // rosetón
+    punto(x0 + w / 2, top + 8, '#ffffff', 2.2);
+  }
+}
+// primer plano: público viendo la mascletà (falleras, móviles grabando) y vallas
+function capaGente(R) {
+  const clave = R + '|' + GROUND; if (genteC && genteC.clave === clave) return genteC.v;
+  const h = 64, c = off(TILE * R, h * R), g = c.getContext('2d'); g.scale(R, R);
+  for (let x = 6; x < TILE; x += rnd(13, 20)) {
+    const alto = rnd(26, 40), y = h - alto, fallera = Math.random() < .16, movil = Math.random() < .12;
+    g.fillStyle = '#07040a';
+    g.beginPath(); g.ellipse(x, h, rnd(11, 15), alto * .55, 0, Math.PI, 0); g.fill();
+    g.beginPath(); g.arc(x, y + 4, rnd(6, 7.5), 0, TAU); g.fill();
+    if (fallera) { g.beginPath(); g.arc(x - 8, y + 4, 3.6, 0, TAU); g.arc(x + 8, y + 4, 3.6, 0, TAU); g.fill(); g.fillStyle = '#ffd23f'; g.beginPath(); g.ellipse(x, y - 4, 6, 3, 0, Math.PI, 0); g.fill(); }
+    if (movil) { const mx = x + rnd(-4, 6), my = y - 10; g.strokeStyle = '#07040a'; g.lineWidth = 3; g.beginPath(); g.moveTo(x + 4, y + 14); g.lineTo(mx + 2, my + 8); g.stroke(); g.globalAlpha = .45; g.drawImage(glowSpr('#bfe6ff'), mx - 10, my - 10, 22, 22); g.globalAlpha = 1; g.fillStyle = '#dff2ff'; g.fillRect(mx - 3, my - 4, 7, 10); }
+  }
+  // vallas metálicas
+  g.strokeStyle = 'rgba(160,170,190,.55)'; g.lineWidth = 1.5;
+  for (let x = 0; x < TILE; x += 70) { g.strokeRect(x + 2, h - 26, 66, 22); for (let k = 8; k < 66; k += 8) { g.beginPath(); g.moveTo(x + 2 + k, h - 26); g.lineTo(x + 2 + k, h - 4); g.stroke(); } }
+  const v = { c, w: TILE, h }; genteC = { clave, v }; return v;
+}
+// fuegos artificiales en el cielo (calculados sin crear objetos por fotograma)
+const COL_FUEGO = ['#ffd23f', '#ff4fd8', '#4ab8ff', '#7dff6a', '#ff5a3a', '#ffffff'];
+let fuegoSig = 0, fuegoT = 0;
+function drawFuegos(t) {
+  const dt = Math.min(.05, fuegoT ? t - fuegoT : 0); fuegoT = t;
+  if (mascletaT > 0) { mascletaT -= dt; if (Math.random() < .35) { shake = Math.max(shake, 4); flash('#fff1c0', .06); } }
+  if (t > fuegoSig && fuegos.length < 4) {
+    fuegoSig = t + rnd(.7, 1.6) * (mascletaT > 0 ? .4 : 1);
+    fuegos.push({ x: rnd(W * .08, W * .92), y: rnd(CEIL + 40, GROUND * .42), t0: t, col: pick(COL_FUEGO), col2: pick(COL_FUEGO), n: 26 + Math.floor(Math.random() * 10), v: rnd(110, 170), ph: Math.random() * 6 });
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = fuegos.length - 1; i >= 0; i--) {
+    const f = fuegos[i], age = t - f.t0, subida = .55;
+    if (age > subida + 1.9) { fuegos.splice(i, 1); continue; }
+    if (age < subida) {   // el cohete sube
+      const k = age / subida, y = GROUND - (GROUND - f.y) * (1 - (1 - k) * (1 - k));
+      ctx.globalAlpha = .9; ctx.drawImage(glowSpr('#ffcf7a'), f.x - 6, y - 6, 12, 12);
+      ctx.globalAlpha = .35; ctx.drawImage(glowSpr('#ff9a3a'), f.x - 3, y + 4, 6, 26);
+      continue;
+    }
+    const a = age - subida, al = Math.max(0, 1 - a / 1.9), r = f.v * (1 - Math.exp(-a * 2.6)), caida = 28 * a * a;
+    if (a < .12) { ctx.globalAlpha = (1 - a / .12) * .7; ctx.drawImage(glowSpr(f.col), f.x - 70, f.y - 70, 140, 140); }
+    for (let k = 0; k < f.n; k++) {
+      const an = k / f.n * TAU + f.ph, rr = r * (k % 3 === 0 ? .62 : 1), x = f.x + Math.cos(an) * rr, y = f.y + Math.sin(an) * rr + caida;
+      const parp = a > 1.1 ? (Math.sin(t * 40 + k) > 0 ? 1 : .3) : 1;
+      ctx.globalAlpha = al * parp; ctx.drawImage(glowSpr(k % 3 === 0 ? f.col2 : f.col), x - 5, y - 5, 10, 10);
+    }
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
+// humo de pólvora a ras de suelo
+function drawHumo(t) {
+  const TW = 1600, TH = 170;
+  if (!humoTira) {
+    const k = .5, c = off(TW * k, TH * k), g = c.getContext('2d'); g.scale(k, k);
+    for (let i = 0; i < 9; i++) {
+      const x = i * 180 + 40, y = 100 + (i % 3) * 16, rx = 200, ry = 60;
+      const gr = g.createRadialGradient(0, 0, 4, 0, 0, 1); gr.addColorStop(0, 'rgba(200,190,200,.16)'); gr.addColorStop(1, 'rgba(200,190,200,0)');
+      for (const dx of [0, -TW]) { g.save(); g.translate(x + dx, y); g.scale(rx, ry); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 1, 0, TAU); g.fill(); g.restore(); }
+    }
+    humoTira = c;
+  }
+  const o = -(((camX * .5 + t * 16) % TW) + TW) % TW;
+  ctx.globalAlpha = (mascletaT > 0 ? 1 : .7) + .1 * Math.sin(t * .7);
+  for (let x = o; x < W; x += TW) ctx.drawImage(humoTira, x, GROUND - TH + 24, TW + 1, TH);
+  ctx.globalAlpha = 1;
+}
+// traca encendida colgada del techo
+let tracaC = null;
+function drawTraca(t) {
+  const sp = 22, TW = sp * 40;
+  if (!tracaC) {
+    const c = off(TW * 2, 24 * 2), g = c.getContext('2d'); g.scale(2, 2);
+    g.strokeStyle = '#8a6a3a'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, 4); g.lineTo(TW, 4); g.stroke();
+    for (let k = 0; k < 40; k++) { const x = k * sp + sp / 2; g.fillStyle = k % 2 ? '#e3241b' : '#f2c21b'; g.fillRect(x - 3, 5, 6, 13); g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(x - 3, 5, 2, 13); g.fillStyle = '#5a3a1a'; g.fillRect(x - .7, 4, 1.4, 2); }
+    tracaC = c;
+  }
+  const o = -(camX % TW);
+  for (let x = o; x < W; x += TW) ctx.drawImage(tracaC, x, CEIL, TW + 1, 24);
+  const fuego = W - ((t * 260) % (W + 400));   // la explosión avanza y deja hueco
+  ctx.fillStyle = '#03040a'; ctx.fillRect(fuego - 4, CEIL + 3, 124, 18);
+  if (fuego > -20 && fuego < W + 20) {
+    ctx.globalCompositeOperation = 'lighter'; const r = 22 + Math.random() * 18;
+    ctx.drawImage(glowSpr('#ffcf5a'), fuego - r, CEIL + 10 - r, r * 2, r * 2); ctx.globalCompositeOperation = 'source-over';
+    if (Math.random() < .5) P(camX + fuego + rnd(0, 30), CEIL + 12, rnd(-80, 80), rnd(20, 160), .5, rnd(2, 4), pick(['#ffd23f', '#ffffff', '#ff8a1f']), 'spark', { drag: 2 });
+  }
+}
+// buñuelo (se recoge)
+function spriteBunuelo() {
+  if (bunSpr) return bunSpr;
+  const c = off(120, 120), g = c.getContext('2d'); g.globalAlpha = .5; g.drawImage(glowSpr('#ffb347'), 0, 0, 120, 120); g.globalAlpha = 1;
+  g.translate(60, 60);
+  const gr = g.createRadialGradient(-6, -8, 4, 0, 0, 24); gr.addColorStop(0, '#ffd889'); gr.addColorStop(.6, '#d9862b'); gr.addColorStop(1, '#8a4a12');
+  g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 21, 0, TAU); g.arc(0, 0, 7, 0, TAU, true); g.fill('evenodd');
+  g.strokeStyle = 'rgba(120,60,10,.6)'; g.lineWidth = 1.2; g.beginPath(); g.arc(0, 0, 14, .4, 2.2); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.85)'; for (let k = 0; k < 26; k++) { const a = Math.random() * TAU, r = rnd(9, 19); g.fillRect(Math.cos(a) * r, Math.sin(a) * r, 1.6, 1.6); }   // azúcar
+  return bunSpr = c;
+}
+// enemigo: ristra de petardos con la mecha encendida (sustituye al láser)
+function drawRistra(e, l, t) {
+  const x1 = e[0], y1 = e[1], x2 = e[2], y2 = e[3], dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
+  ctx.strokeStyle = 'rgba(255,160,40,.10)'; ctx.lineWidth = 26; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  ctx.strokeStyle = '#7a5528'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  const n = Math.floor(len / 9), chispa = ((t * .45 + l.ph * .1) % 1) * len;
+  for (let i = 0; i <= n; i++) {
+    const d = i * 9, x = x1 + ux * d, y = y1 + uy * d, lado = i % 2 ? 1 : -1;
+    ctx.save(); ctx.translate(x + nx * lado * 5, y + ny * lado * 5); ctx.rotate(Math.atan2(ny, nx) + lado * .25);
+    ctx.fillStyle = i % 3 === 0 ? '#f2c21b' : '#e3241b'; ctx.fillRect(-6, -3, 12, 6);
+    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(-6, -3, 12, 1.5);
+    ctx.fillStyle = '#2a1a0a'; ctx.fillRect(-6, -3, 1.5, 6); ctx.fillRect(4.5, -3, 1.5, 6);
+    ctx.restore();
+  }
+  const cx = x1 + ux * chispa, cy = y1 + uy * chispa, r = 14 + Math.random() * 10;
+  ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowSpr('#ffcf5a'), cx - r, cy - r, r * 2, r * 2); ctx.globalCompositeOperation = 'source-over';
+  if (Math.random() < .4) P(cx, cy, rnd(-120, 120), rnd(-120, 60), .35, rnd(2, 3.5), pick(['#ffd23f', '#ffffff', '#ff8a1f']), 'spark', { drag: 3 });
+}
+// enemigo: ninot cabezón enfadado (sustituye al virus)
+function drawNinot(v, t) {
+  ctx.save(); ctx.translate(v.x, v.y); ctx.rotate(Math.sin(t * 2.4 + v.ph) * .18);
+  // mecha encendida en la cabeza (¡que se quema!)
+  ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(4, -22); ctx.quadraticCurveTo(10, -30, 7, -36); ctx.stroke();
+  ctx.globalCompositeOperation = 'lighter'; const ch = 12 + Math.random() * 10; ctx.drawImage(glowSpr('#ffcf5a'), 7 - ch / 2, -36 - ch / 2, ch, ch); ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#f0c49a'; ctx.beginPath(); ctx.ellipse(0, 0, 20, 22, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#2a1a12'; ctx.beginPath(); ctx.ellipse(-2, -17, 18, 8, -.1, Math.PI, 0); ctx.fill();   // pelo
+  ctx.fillStyle = '#d9a17a'; ctx.beginPath(); ctx.ellipse(-20, 2, 5, 7, 0, 0, TAU); ctx.ellipse(20, 2, 5, 7, 0, 0, TAU); ctx.fill();   // orejas
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-8, -5, 6, 0, TAU); ctx.arc(8, -5, 6, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(-6 + Math.sin(t * 3) * 1.5, -4, 2.6, 0, TAU); ctx.arc(10 + Math.sin(t * 3) * 1.5, -4, 2.6, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#2a1a12'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-14, -14); ctx.lineTo(-3, -10); ctx.moveTo(14, -14); ctx.lineTo(3, -10); ctx.stroke();
+  ctx.fillStyle = '#e8463a'; ctx.beginPath(); ctx.ellipse(2, 3, 7, 6, .2, 0, TAU); ctx.fill();   // narizota
+  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.arc(0, 1, 2, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#2a1a12'; ctx.fillRect(-10, 9, 22, 3);   // bigote
+  ctx.strokeStyle = '#7a2a1a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(1, 20, 7, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+  ctx.restore();
+}
+// enemigo: cartuchos de TNT (sustituye al virus)
+function drawTNT(v, t) {
+  ctx.save(); ctx.translate(v.x, v.y); ctx.rotate(Math.sin(t * 3 + v.ph) * .25);
+  ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -18); ctx.quadraticCurveTo(-8, -28, -3, -34); ctx.stroke();
+  ctx.globalCompositeOperation = 'lighter'; const ch = 14 + Math.random() * 12; ctx.drawImage(glowSpr('#ffcf5a'), -3 - ch / 2, -34 - ch / 2, ch, ch); ctx.globalCompositeOperation = 'source-over';
+  [-12, 0, 12].forEach((x, i) => {
+    const gr = ctx.createLinearGradient(x - 6, 0, x + 6, 0); gr.addColorStop(0, '#8a0e0e'); gr.addColorStop(.45, '#e3241b'); gr.addColorStop(1, '#7a0a0a');
+    ctx.fillStyle = gr; ctx.fillRect(x - 6, -18 + (i === 1 ? -3 : 0), 12, 36);
+  });
+  ctx.fillStyle = '#2a1a0a'; ctx.fillRect(-19, -6, 38, 5); ctx.fillRect(-19, 8, 38, 5);
+  ctx.fillStyle = '#f2e3b0'; ctx.fillRect(-15, -1, 30, 9);
+  ctx.fillStyle = '#c21b1b'; ctx.font = '900 8px Orbitron, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('TNT', 0, 4);
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(-6, -10, 3.4, 4, 0, 0, TAU); ctx.ellipse(6, -10, 3.4, 4, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(-5, -9, 1.7, 0, TAU); ctx.arc(5, -9, 1.7, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-10, -15.5); ctx.lineTo(-2, -13); ctx.moveTo(10, -15.5); ctx.lineTo(2, -13); ctx.stroke();
+  ctx.restore();
+}
+// enemigo: cohete (sustituye al misil)
+function drawCohete(m, t) {
+  ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(Math.sin(t * 25 + m.y) * .03);
+  // llama y chispas detrás
+  ctx.globalCompositeOperation = 'lighter';
+  const fl = 34 + Math.random() * 18;
+  ctx.drawImage(glowSpr('#ff8a1f'), 28, -14, fl + 20, 28); ctx.drawImage(glowSpr('#ffe08a'), 28, -7, fl * .6, 14);
+  ctx.globalCompositeOperation = 'source-over';
+  // varilla
+  ctx.fillStyle = '#c9a36a'; ctx.fillRect(10, 5, 44, 2.4);
+  // cuerpo
+  const gr = ctx.createLinearGradient(0, -9, 0, 9); gr.addColorStop(0, '#ff6a5a'); gr.addColorStop(.5, '#e3241b'); gr.addColorStop(1, '#8a0e0e');
+  ctx.fillStyle = gr; ctx.fillRect(-14, -8, 44, 16);
+  ctx.fillStyle = '#f2f2f2'; ctx.fillRect(2, -8, 6, 16); ctx.fillRect(16, -8, 4, 16);
+  ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(-14, -8); ctx.lineTo(-34, 0); ctx.lineTo(-14, 8); ctx.closePath(); ctx.fill();   // punta
+  ctx.fillStyle = '#1d3f8a'; ctx.beginPath(); ctx.moveTo(22, -8); ctx.lineTo(34, -17); ctx.lineTo(32, -8); ctx.moveTo(22, 8); ctx.lineTo(34, 17); ctx.lineTo(32, 8); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(-14, -7, 44, 2.5);
+  ctx.restore();
+  if (Math.random() < .6) P(m.x + rnd(40, 60), m.y + rnd(-6, 6), rnd(80, 220), rnd(-50, 50), .4, rnd(1.5, 3.5), pick(['#ffd23f', '#ff8a1f', '#ffffff']), 'spark', { drag: 2 });
+}
+
 /* ---- aplicar tema ---- */
 let temaPendiente = null;
 function textosTema() {
-  const hw = HW(), nv = NV();
-  document.body.classList.toggle('tema-halloween', hw); document.body.classList.toggle('tema-navidad', nv);
-  $$('[data-hw]').forEach(el => { if (el.dataset.normal == null) el.dataset.normal = el.textContent; el.textContent = hw ? el.dataset.hw : nv && el.dataset.nv ? el.dataset.nv : el.dataset.normal; });
-  FRASES.length = 0; FRASES.push(...(hw ? FRASES_H : nv ? FRASES_X : FRASES_N));
-  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = hw ? '#1a0a12' : nv ? '#071a33' : '#05060f';
+  const hw = HW(), nv = NV(), fa = FA();
+  document.body.classList.toggle('tema-halloween', hw); document.body.classList.toggle('tema-navidad', nv); document.body.classList.toggle('tema-fallas', fa);
+  $$('[data-hw]').forEach(el => { if (el.dataset.normal == null) el.dataset.normal = el.textContent; el.textContent = hw ? el.dataset.hw : nv && el.dataset.nv ? el.dataset.nv : fa && el.dataset.fa ? el.dataset.fa : el.dataset.normal; });
+  FRASES.length = 0; FRASES.push(...(hw ? FRASES_H : nv ? FRASES_X : fa ? FRASES_F : FRASES_N));
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = hw ? '#1a0a12' : nv ? '#071a33' : fa ? '#2a0f22' : '#05060f';
 }
-function aplicaTema(t, ya) {
-  t = ['halloween', 'navidad'].includes(t) ? t : 'normal';
+function aplicaTema(t, ya, prueba) {
+  t = ['halloween', 'navidad', 'fallas'].includes(t) ? t : 'normal';
+  if (!prueba) { TEMA_SERVIDOR = t; store('tema', t); if (TEMA_PRUEBA) return; }   // en modo pruebas se ignora el tema de los jugadores
   if (t === TEMA && !ya) return;
   if (!ya && ['play', 'count', 'dying'].includes(state)) { temaPendiente = t; return; }
-  TEMA = t; temaPendiente = null; store('tema', t);
+  TEMA = t; temaPendiente = null;
   paletaTema(); textosTema();
   skyTop = ZONAS[zona].top; skyBot = ZONAS[zona].bot; skyT = 1;
-  zonaLista = null; zonaPrep = -1; calSprG = null; lamparas = null; guirnaldaC = null;
+  zonaLista = null; zonaPrep = -1; calSprG = null; lamparas = null; guirnaldaC = null; fuegos.length = 0;
   layers = buildLayers(zona); prevLayers = null; layerFade = 1;
 }
-textosTema();
+textosTema(); document.body.classList.toggle('pruebas', !!TEMA_PRUEBA);
