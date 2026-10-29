@@ -656,3 +656,38 @@ body.tema-halloween .btn.jugar{animation:shine 2.5s linear infinite,latidoH 1.6s
 .card.adios{max-width:420px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
 .card.adios .lucasImg{height:min(34vh,200px);width:auto}
 .card.adios p{color:#a9c4cc;font-size:16px}
+/* cartel del reto progresivo */
+.finProx{display:flex;align-items:center;gap:12px;text-align:left;margin:8px 0 2px;padding:10px 14px;border-radius:14px;position:relative;overflow:hidden;
+  background:linear-gradient(120deg,rgba(255,122,26,.16),rgba(255,43,78,.10));border:1px solid rgba(255,138,31,.55);box-shadow:0 0 22px rgba(255,122,26,.25);animation:retoEntra .6s .9s cubic-bezier(.2,1.4,.4,1) both}
+.finProx.casi{background:linear-gradient(120deg,rgba(0,229,255,.12),rgba(177,75,255,.10));border-color:rgba(0,229,255,.5);box-shadow:0 0 22px rgba(0,229,255,.2)}
+.finProx::after{content:"";position:absolute;top:0;left:-40%;width:30%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);transform:skewX(-20deg);animation:retoBrillo 2.8s 1.6s infinite}
+.finProx>i{font-style:normal;font-size:28px;filter:drop-shadow(0 0 8px rgba(255,140,40,.8))}
+.finProx small{display:block;font-family:Orbitron;font-size:10px;font-weight:900;letter-spacing:.18em;color:#ffb15a}
+.finProx.casi small{color:#7fe9ff}
+.finProx b{display:block;font-size:16px;color:#fff;line-height:1.2}
+.finProx em{font-style:normal;font-family:Orbitron;color:#ffd23f;text-shadow:0 0 10px rgba(255,210,63,.6)}
+.finProx span{display:block;font-size:13px;color:#a9c4cc}
+@keyframes retoEntra{from{opacity:0;transform:translateY(12px) scale(.9)}}
+@keyframes retoBrillo{0%{left:-40%}60%,100%{left:130%}}
+@media (max-height:520px) and (orientation:landscape){.finProx{padding:5px 10px;margin:4px 0 0}.finProx>i{font-size:20px}.finProx b{font-size:13px}.finProx span{font-size:11px}}
+
+/* ===== Tema Navidad ===== */
+.temaBadge.nv,.temaBadge.hw{display:none}
+body.tema-halloween .temaBadge.hw{display:block}
+body.tema-navidad{--v:#2fe37a;--c:#ffd23f;--tx:#f4fbff}
+body.tema-navidad .temaBadge.nv{display:block;position:absolute;left:50%;bottom:2%;transform:translateX(-50%);z-index:4;white-space:nowrap;
+  font-family:Orbitron;font-weight:900;font-size:12px;letter-spacing:.14em;color:#fff;padding:6px 14px;border-radius:999px;
+  background:linear-gradient(90deg,rgba(200,16,46,.85),rgba(15,120,60,.85));border:1px solid rgba(255,210,63,.7);box-shadow:0 0 18px rgba(255,210,63,.4);animation:temaFlota 3s ease-in-out infinite}
+body.tema-navidad .btn.jugar{color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.25);background:repeating-linear-gradient(115deg,#e3102c 0 22px,#ff4d63 22px 44px);background-size:200% 100%;
+  box-shadow:0 0 24px rgba(227,16,44,.55),0 0 60px rgba(227,16,44,.22);animation:shine 4s linear infinite,latidoN 1.6s ease-in-out infinite}
+@keyframes latidoN{50%{box-shadow:0 0 34px rgba(255,210,63,.75),0 0 90px rgba(227,16,44,.35)}}
+body.tema-navidad .btn.sec{background:rgba(47,227,122,.08);border-color:rgba(255,210,63,.55);color:#f2fff6}
+body.tema-navidad .card{border-color:rgba(255,210,63,.35)}
+body.tema-navidad .halo{background:radial-gradient(circle,rgba(255,210,63,.22),rgba(47,227,122,.12) 50%,transparent 70%)!important}
+body.tema-navidad .titulo b{filter:hue-rotate(-60deg) saturate(1.2)}
+body.tema-navidad .bocadillo{box-shadow:0 0 18px rgba(255,210,63,.5)}
+body.tema-navidad .logoWrap{filter:drop-shadow(0 0 12px rgba(255,210,63,.35))}
+@media (max-height:520px) and (orientation:landscape){body.tema-navidad .temaBadge.nv{font-size:9px;padding:4px 10px;bottom:1%}}
+.tPrev.navidad{background:radial-gradient(circle at 70% 35%,#eef7ff 0 13%,rgba(160,210,255,.35) 14%,transparent 24%),linear-gradient(#020617,#0b2447);box-shadow:inset 0 -18px 0 #eaf4ff}
+.tPrev.navidad i{position:absolute;left:0;right:0;bottom:18px;height:30px;background:repeating-linear-gradient(90deg,#0b1830 0 18px,transparent 18px 24px,#0e2040 24px 34px,transparent 34px 40px);border-top:3px dotted #ffd23f}
+body.tema-halloween .temaBadge.nv{display:none!important}

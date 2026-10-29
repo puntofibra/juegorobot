@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=25">
+<link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -60,7 +60,7 @@
     <div class="hero">
       <div class="bocadillo" id="bocadillo">¡Hola! Soy Lucas</div>
       <div class="halo"></div>
-      <div class="temaBadge">🎃 EDICIÓN HALLOWEEN 🦇</div>
+      <div class="temaBadge hw">🎃 EDICIÓN HALLOWEEN 🦇</div><div class="temaBadge nv">🎄 EDICIÓN NAVIDAD ❄️</div>
       <div class="heroLucas flota">
         <canvas id="heroFx"></canvas>
         <img id="heroImg" src="img/capa.webp" alt="Lucas con capa" class="lucasImg grande">
@@ -93,8 +93,8 @@
       <h2>Cómo se juega</h2>
       <ul class="ayuda">
         <li><b>Mantén pulsado</b> (pantalla, ratón o espacio) para que Lucas suba. Suelta para bajar.</li>
-        <li>Recoge <b class="v" data-hw="calabazas">datos</b> seguidos para hacer combos y multiplicar los puntos.</li>
-        <li>Esquiva <b class="r" data-hw="gusanos">láseres</b>, <b class="m" data-hw="murciélagos">virus</b> y <b class="r" data-hw="cuchillos">misiles</b>. Pasar rozando <span data-hw="un gusano">un láser</span> da puntos extra.</li>
+        <li>Recoge <b class="v" data-hw="calabazas" data-nv="monedas de oro">datos</b> seguidos para hacer combos y multiplicar los puntos.</li>
+        <li>Esquiva <b class="r" data-hw="gusanos" data-nv="bastones de caramelo">láseres</b>, <b class="m" data-hw="murciélagos" data-nv="bolas malvadas">virus</b> y <b class="r" data-hw="cuchillos" data-nv="carámbanos">misiles</b>. Pasar rozando <span data-hw="un gusano" data-nv="un bastón">un láser</span> da puntos extra.</li>
       </ul>
       <div class="pws" id="ayudaPw"></div>
       <div class="ayudaBtns"><button class="btn jugar peq" data-cerrar>¡Entendido!</button><a class="btn sec webCreador" href="https://puntofibra.github.io/web/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg>Web del creador</a></div>
@@ -136,6 +136,7 @@
       </div>
       <div class="envio" id="envio"></div>
       <div id="finItem" class="finItem oculto"><img alt=""><div><small>¡OBJETO CONSEGUIDO!</small><b></b><code></code></div><button class="btn sec mini" id="btnVerSala">Ver en mi sala</button></div>
+      <div id="finProx" class="finProx oculto"></div>
       <button id="btnOtra" class="btn jugar peq">Otra vez</button>
       <div class="fila">
         <button id="btnFinRank" class="btn sec">Ranking</button>
@@ -277,7 +278,7 @@
           <div class="temas" id="admTemas">
             <button class="tema" data-tema="normal"><span class="tPrev normal"><i></i></span><b>Normal</b><small>Ciudad neón de Futurmovil</small><em>ACTIVO</em></button>
             <button class="tema" data-tema="halloween"><span class="tPrev halloween"><i></i></span><b>Halloween</b><small>Murciélagos, gusanos, cuchillos y calabazas</small><em>ACTIVO</em></button>
-            <button class="tema prox" disabled><span class="tPrev navidad"><i></i></span><b>Navidad</b><small>Muy pronto</small></button>
+            <button class="tema" data-tema="navidad"><span class="tPrev navidad"><i></i></span><b>Navidad</b><small>Nieve, bastones de caramelo, bolas malvadas y monedas de oro</small><em>ACTIVO</em></button>
           </div>
           <p class="admNota">Los jugadores que estén en el menú lo verán cambiar en menos de un minuto; los que estén jugando, al terminar la partida.</p>
         </div>
@@ -386,6 +387,6 @@
 </div>
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="game.js?v=33"></script>
+<script src="game.js?v=34"></script>
 </body>
 </html>
