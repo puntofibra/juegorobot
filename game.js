@@ -1234,7 +1234,8 @@ function show(id, dim) {
 function confirma(o) {
   return new Promise(ok => {
     const m = $('#modal'), si = $('#mSi'), no = $('#mNo');
-    $('#mIco').textContent = o.ico || '?'; $('#mIco').className = 'mIco' + (o.peligro ? ' peligro' : '');
+    if (/^</.test(o.ico || '')) $('#mIco').innerHTML = o.ico; else $('#mIco').textContent = o.ico || '?';
+    $('#mIco').className = 'mIco' + (o.peligro ? ' peligro' : '');
     $('#mTit').textContent = o.titulo || '¿Seguro?'; $('#mTxt').innerHTML = o.html || '';
     si.textContent = o.si || 'Aceptar'; no.textContent = o.no || 'Cancelar';
     si.className = o.peligro ? 'btn peligro' : 'btn jugar peq';
@@ -1478,7 +1479,7 @@ window.addEventListener('resize', () => { resize(); });
 $('#btnJugar').onclick = startGame;
 /* ---- salir del juego ---- */
 $('#btnCerrar').onclick = () => {
-  confirma({ ico: '⏻', titulo: 'Salir del juego', html: '¿Seguro que quieres salir de <b>LUCASBOT 5G</b>?', si: 'Salir', no: 'Seguir jugando', peligro: true }).then(si => {
+  confirma({ ico: '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 3v8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>', titulo: 'Salir del juego', html: '¿Seguro que quieres salir de <b>LUCASBOT 5G</b>?', si: 'Salir', no: 'Seguir jugando', peligro: true }).then(si => {
     if (!si) return;
     Audio5.apagar(); clearInterval(fraseTimer); state = 'adios';
     try { window.close(); } catch (e) {}
@@ -1807,7 +1808,7 @@ requestAnimationFrame(loop);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---- actualización automática: si hay una versión nueva, se recarga sola en el menú ---- */
-const VERSION = 36;   // subir este número (y version.json) en cada actualización
+const VERSION = 37;   // subir este número (y version.json) en cada actualización
 let nuevaVersion = 0, actualizando = false, ultVer = 0;
 function compruebaVersion(forzar) {
   if (actualizando || (!forzar && Date.now() - ultVer < 30000)) return; ultVer = Date.now();
@@ -3108,6 +3109,14 @@ textosTema(); document.body.classList.toggle('pruebas', !!TEMA_PRUEBA);
   let Wc = 0, Hc = 0, DP = 1, TW = 64, TH = 32, WH = 96, OX = 0, OY = 0;
   const yo = { x: 5, y: 8, px: 5, py: 8, dir: 1 };
   const otros = new Map(), burbujas = new Map();
+  let actividad = 0, firma0 = '';
+  /* ritmo adaptativo: si alguien se mueve o escribe, consulta cada 0,7 s; si la sala está en calma, cada 2 s.
+     Con mucha gente se frena un poco para no saturar el servidor. */
+  function bucleSync() {
+    if (!CHAT_ON) return;
+    const calma = performance.now() - actividad > 8000, mucha = otros.size > 10;
+    sync(); syncId = setTimeout(bucleSync, calma ? 2000 : mucha ? 1100 : 700);
+  }
   let seq = 0, enCurso = false, pendMsg = '', emo = '', emoHasta = 0, rafId = 0, syncId = 0, hover = null, menuDe = null, lastT = 0, primera = true;
   const DECOR = [{ x: 0, y: 0, t: 'copa_oro' }, { x: 9, y: 0, t: 'copa_plata' }, { x: 0, y: 9, t: 'calabaza' }];
   const bloqueada = (x, y) => DECOR.some(d => d.x === x && d.y === y);
@@ -3258,6 +3267,8 @@ textosTema(); document.body.classList.toggle('pruebas', !!TEMA_PRUEBA);
       });
       otros.forEach((o, n) => { if (!vistos.has(n)) { otros.delete(n); log('', n + ' ha salido de la sala', 'sis'); } });
       d.msgs.forEach(m => { const mio = m.u === miNombre(); if (!(mio && !primera)) { log(m.u, m.txt, mio ? 'yo' : ''); if (!primera) burbuja(m.u, m.txt); } });
+      const f = d.users.map(u => u.u + u.x + ',' + u.y + u.e).join('|') + '#' + d.seq;
+      if (f !== firma0 || d.msgs.length) { actividad = performance.now(); firma0 = f; }
       seq = d.seq || seq; primera = false;
       $('#chatN').textContent = d.users.length;
     });
@@ -3266,7 +3277,7 @@ textosTema(); document.body.classList.toggle('pruebas', !!TEMA_PRUEBA);
   function decir(txt) {
     txt = String(txt || '').trim().slice(0, 120); if (!txt) return;
     pendMsg = pendMsg ? pendMsg + ' ' + txt : txt;
-    burbuja(miNombre(), txt); log(miNombre(), txt, 'yo'); Audio5.click();
+    burbuja(miNombre(), txt); log(miNombre(), txt, 'yo'); Audio5.click(); actividad = performance.now();
     setTimeout(sync, 60);
   }
 
@@ -3279,7 +3290,7 @@ textosTema(); document.body.classList.toggle('pruebas', !!TEMA_PRUEBA);
     let sel = null; otros.forEach((o, n) => { if (o._sx != null && Math.abs(x - o._sx) < TW * .45 && y > o._top - 6 && y < o._sy + 4) sel = n; });
     if (sel) { abrirMenu(sel); return; }
     const c = casilla(x, y); if (!c || bloqueada(c.x, c.y)) return;
-    yo.x = c.x; yo.y = c.y; Audio5.click(); setTimeout(sync, 30);
+    yo.x = c.x; yo.y = c.y; actividad = performance.now(); Audio5.click(); setTimeout(sync, 30);
   });
   function abrirMenu(nom) {
     menuDe = nom; const o = otros.get(nom), m = $('#chatMenu');
@@ -3302,11 +3313,11 @@ textosTema(); document.body.classList.toggle('pruebas', !!TEMA_PRUEBA);
     $('#chatLog').innerHTML = ''; log('', 'Bienvenido al lobby, ' + miNombre() + '. Toca el suelo para moverte y a otro jugador para intercambiar.', 'sis');
     estado('Entrando en la sala…'); lastT = 0;
     cancelAnimationFrame(rafId); rafId = requestAnimationFrame(frame);
-    clearInterval(syncId); syncId = setInterval(sync, 1200); sync();
+    clearTimeout(syncId); actividad = performance.now(); bucleSync();
   }
   function cerrarChat() {
     if (!CHAT_ON) return;
-    CHAT_ON = false; clearInterval(syncId); cancelAnimationFrame(rafId); cerrarMenu();
+    CHAT_ON = false; clearTimeout(syncId); cancelAnimationFrame(rafId); cerrarMenu();
     api('chat', { token: SES.token, op: 'salir' });
     $('#sChat').classList.remove('show'); $('#sInv').appendChild($('#tPanel'));
     abrirSala();
