@@ -37,7 +37,7 @@ const Audio5 = (() => {
   let step = 0, nextT = 0, timer = null, intensity = 0;
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
   function init() {
-    if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+    if (ac) { if (ac.state === 'suspended' && !document.hidden) ac.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     ac = new AC();
     comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
@@ -137,6 +137,13 @@ const Audio5 = (() => {
     if (st === 4 || st === 12) noise(0.45, 0.22, 2200, 500, 'bandpass', dly, mus);                                               // caja con cola
     if (st % 2 === 1) tone(st % 4 === 1 ? 3200 : 2400, 0.03, 'square', 0.02 + intensity * 0.015, 0, dly, mus);                    // tic-tac de reloj
   }
+  // pausar todo el sonido cuando el juego no está en pantalla (otra app, botón de inicio, pantalla apagada)
+  let oculto = false;
+  function dormir() { oculto = true; if (ac && ac.state === 'running') ac.suspend().catch(() => {}); }
+  function despertar() { oculto = false; if (ac && ac.state === 'suspended') ac.resume().then(() => { nextT = Math.max(nextT, ac.currentTime + 0.05); }).catch(() => {}); }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) dormir(); else despertar(); });
+  window.addEventListener('pagehide', dormir);
+  window.addEventListener('pageshow', () => { if (!document.hidden) despertar(); });
   return {
     init,
     get snd() { return snd; }, get mus() { return musOn; },
@@ -1661,7 +1668,7 @@ requestAnimationFrame(loop);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---- actualización automática: si hay una versión nueva, se recarga sola en el menú ---- */
-const VERSION = 31;   // subir este número (y version.json) en cada actualización
+const VERSION = 32;   // subir este número (y version.json) en cada actualización
 let nuevaVersion = 0, actualizando = false, ultVer = 0;
 function compruebaVersion(forzar) {
   if (actualizando || (!forzar && Date.now() - ultVer < 30000)) return; ultVer = Date.now();
