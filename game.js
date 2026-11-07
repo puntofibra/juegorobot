@@ -440,7 +440,7 @@ let spawnX = 0, nextPower = 0, missileT = 0, lastZone = 0;
 const L = { y: 360, vy: 0, rot: 0, sx: 1, sy: 1, vis: false, inX: 0, trail: [], dead: false, spin: 0, ground: false };
 const pw = { escudo: false, iman: 0, turbo: 0, x2: 0, invul: 0 };
 const MP_H = 640;   // altura fija del mundo a dobles
-const MP = { on: false, role: null, rng: Math.random, oid: 0 };   // estado del modo 2 jugadores (ver «MODO 2 JUGADORES»)
+const MP = { on: false, role: null, rng: Math.random, oid: 0, op: { misil: true, laser: true, virus: true }, crono: 0, stop: false };   // estado del modo 2 jugadores (ver «MODO 2 JUGADORES»)
 let coinsArr = [], lasers = [], viruses = [], missiles = [], powers = [], parts = [], texts = [], warns = [];
 
 function resize() {
@@ -493,12 +493,13 @@ function spawnChunk0(meters, tocaPower) {
   let x = spawnX, w = 0;
   const r = Math.random();
   const opts = [];
+  const LZ = !MP.on || MP.op.laser, VR = !MP.on || MP.op.virus;   // a dobles se pueden quitar láseres y virus
   opts.push(['coins', 1.2 - d * .5]);
-  opts.push(['laser', 1.1]);
-  if (meters > 120) opts.push(['laser2', .6 + d]);
-  if (meters > 250) opts.push(['rot', .4 + d * .8]);
-  if (meters > 200) opts.push(['virus', .5 + d * .8]);
-  if (meters > 400) opts.push(['tunnel', .3 + d * .6]);
+  if (LZ) opts.push(['laser', 1.1]);
+  if (LZ && meters > 120) opts.push(['laser2', .6 + d]);
+  if (LZ && meters > 250) opts.push(['rot', .4 + d * .8]);
+  if (VR && meters > 200) opts.push(['virus', .5 + d * .8]);
+  if (LZ && meters > 400) opts.push(['tunnel', .3 + d * .6]);
   const tot = opts.reduce((s, o) => s + o[1], 0); let q = r * tot, kind = opts[0][0];
   for (const o of opts) { q -= o[1]; if (q <= 0) { kind = o[0]; break; } }
 
@@ -627,7 +628,7 @@ function update(dt) {
     speed = lerp(speed, target, Math.min(1, dt * (pw.turbo > 0 ? 4 : 1.6)));
   } else if (state === 'dying') speed = lerp(speed, 0, Math.min(1, dt * 1.6));
   camX += speed * dt;
-  if (state === 'play' && !L.dead) { meters += speed * dt / 40; playT += dt; if (!premioAvisado && PREMIO && SES && score() >= (MIN_HOY || PREMIO.minimo)) { premioAvisado = true; const it = ITEMS[PREMIO.tipo]; showBanner('¡OBJETO DESBLOQUEADO!', (it ? it.nom : PREMIO.tipo).toUpperCase(), '#ff9a2b'); Audio5.record(); flash('#ff9a2b', .25); } }
+  if (state === 'play' && !L.dead && !MP.stop) { meters += speed * dt / 40; playT += dt; if (!premioAvisado && PREMIO && SES && score() >= (MIN_HOY || PREMIO.minimo)) { premioAvisado = true; const it = ITEMS[PREMIO.tipo]; showBanner('¡OBJETO DESBLOQUEADO!', (it ? it.nom : PREMIO.tipo).toUpperCase(), '#ff9a2b'); Audio5.record(); flash('#ff9a2b', .25); } }
 
   // zonas
   const zm = MP.on ? camX / 40 : meters, zn = Math.floor(zm / 800);
@@ -641,7 +642,7 @@ function update(dt) {
   if (state === 'play') {
     while (spawnX < camX + W + 300) spawnChunk();
     // misiles
-    if (meters > 350 && !L.dead) {
+    if (meters > 350 && !L.dead && (!MP.on || MP.op.misil)) {
       missileT -= dt;
       if (missileT <= 0) { warns.push({ y: L.y, t: 1.35 }); missileT = rnd(7, 13) - difficulty() * 4; if (difficulty() > .5 && Math.random() < .4) warns.push({ y: L.y + rnd(-150, 150), t: 1.7 }); }
     }
@@ -661,7 +662,7 @@ function update(dt) {
   for (let i = coinsArr.length - 1; i >= 0; i--) {
     const c = coinsArr[i];
     if (c.x < camX - 100) { coinsArr.splice(i, 1); continue; }
-    if (state !== 'play' || L.dead) continue;
+    if (state !== 'play' || L.dead || MP.stop) continue;
     let dx = px - c.x, dy = py - c.y, d = Math.hypot(dx, dy);
     if (pw.iman > 0 && d < 330 && c.x < camX + W) { const k = Math.min(1, dt * (900 / Math.max(d, 40))); c.x += dx * k; c.y += dy * k; d = Math.hypot(px - c.x, py - c.y); c.mag = true; }
     if (nearest((x, y) => Math.hypot(x - c.x, y - c.y)) < 18) {
@@ -1828,7 +1829,7 @@ requestAnimationFrame(loop);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---- actualización automática: si hay una versión nueva, se recarga sola en el menú ---- */
-const VERSION = 39;   // subir este número (y version.json) en cada actualización
+const VERSION = 40;   // subir este número (y version.json) en cada actualización
 let nuevaVersion = 0, actualizando = false, ultVer = 0;
 function compruebaVersion(forzar) {
   if (actualizando || (!forzar && Date.now() - ultVer < 30000)) return; ultVer = Date.now();
@@ -3425,12 +3426,12 @@ const Duo = (() => {
     dc = ch;
     dc.onopen = () => {
       clearTimeout(failT); O.conn = true;
-      send({ t: 'hola', n: names[yo()] });
+      send({ t: 'hola', n: names[yo()] }); if (MP.role === 'host') send({ t: 'cfg', o: opcs() });
       if (MP.role === 'host') {
         Audio5.record();
         $('#duoEst').innerHTML = `<b class="duoOk">¡${escH(names[1] || 'Tu rival')} se ha unido!</b><br>Empieza la partida…`;
         setTimeout(empezar, 1400);
-      } else pantalla(`<img src="img/mando.webp" class="lucasImg media flota" alt=""><h2>¡CONECTADO!</h2><p class="duoTxt">Esperando a que <b>${escH(names[0])}</b> empiece la partida…</p><div class="duoSpin"></div>`);
+      } else pantalla(`<img src="img/mando.webp" class="lucasImg media flota" alt=""><h2>¡CONECTADO!</h2><p class="duoTxt">Esperando a que <b>${escH(names[0])}</b> empiece la partida…</p><div class="duoOpcV" id="duoOpcV"></div><div class="duoSpin"></div>`);
     };
     dc.onclose = () => perdido();
     dc.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } recibe(m); };
@@ -3464,12 +3465,22 @@ const Duo = (() => {
           <h2>2 JUGADORES</h2>
           <p class="duoTxt">Tu rival escanea este código con su móvil y entra directo, <b>sin cuenta</b></p>
           <div class="duoCode">${code}</div>
+          <div class="duoOpcT">PELIGROS DE LA PARTIDA <small>(toca para activar o quitar)</small></div>
+          <div class="duoOpc">
+            <label class="chk"><input type="checkbox" id="opMisil"><i></i><span>🚀 Misiles</span></label>
+            <label class="chk"><input type="checkbox" id="opLaser"><i></i><span>⚡ Láseres</span></label>
+            <label class="chk"><input type="checkbox" id="opVirus"><i></i><span>🦠 Virus</span></label>
+          </div>
+          <div class="duoModo" id="duoModo"></div>
           <div class="duoEst" id="duoEst"><div class="duoSpin peq"></div>Esperando a tu rival…</div>
           <div class="fila"><button class="btn sec" id="duoSh">Enviar enlace</button><button class="btn ter" id="duoCan">Cancelar</button></div>
         </div></div>`);
       try { const q = qrcode(0, 'M'); q.addData(url); q.make(); $('#duoQr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); } catch (e) { $('#duoQr').textContent = url; }
       $('#duoSh').onclick = () => { const text = '🤖🤖 ¡Te reto a LUCASBOT 5G! Entra y vuela contra mí (sala ' + code + ')'; if (navigator.share) navigator.share({ title: 'LUCASBOT 5G', text, url }).catch(() => {}); else window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + url), '_blank'); };
       $('#duoCan').onclick = () => { salir(); goMenu(); };
+      const g = load('duoOp', null) || {}; $('#opMisil').checked = g.misil !== false; $('#opLaser').checked = g.laser !== false; $('#opVirus').checked = g.virus !== false;
+      ['#opMisil', '#opLaser', '#opVirus'].forEach(id => $(id).onchange = () => { Audio5.click(); store('duoOp', opcs()); pintaModo(); send({ t: 'cfg', o: opcs() }); });
+      pintaModo();
       let ocupado = false;
       pollT = setInterval(async () => {
         if (ocupado || !pc) return; ocupado = true;
@@ -3484,6 +3495,22 @@ const Duo = (() => {
         }
       }, 1300);
     } catch (e) { toast(String(e.message || e)); salir(); goMenu(); }
+  }
+  function opcs() {
+    const v = id => { const e = $(id); return e ? e.checked : true; };
+    if ($('#opMisil')) return { misil: v('#opMisil'), laser: v('#opLaser'), virus: v('#opVirus') };
+    const g = load('duoOp', null) || {}; return { misil: g.misil !== false, laser: g.laser !== false, virus: g.virus !== false };
+  }
+  const sinPeligro = o => !o.misil && !o.laser && !o.virus;
+  function pintaModo() {
+    const e = $('#duoModo'); if (!e) return; const o = opcs();
+    e.innerHTML = sinPeligro(o) ? '⏱️ <b>Sin peligros:</b> partida de <b>3 minutos</b>, gana quien más puntos tenga' : '💥 Gana quien más puntos tenga cuando caigáis los dos';
+    e.classList.toggle('crono', sinPeligro(o));
+  }
+  function pintaOpcV(o) {
+    const e = $('#duoOpcV'); if (!e) return;
+    const f = (k, t) => `<span class="${o[k] ? 'si' : 'no'}">${t}</span>`;
+    e.innerHTML = f('misil', '🚀 Misiles') + f('laser', '⚡ Láseres') + f('virus', '🦠 Virus') + (sinPeligro(o) ? '<em>⏱️ Partida de 3 minutos</em>' : '');
   }
   function qrLib() {
     if (window.qrcode) return Promise.resolve();
@@ -3526,7 +3553,8 @@ const Duo = (() => {
   function recibe(m) {
     switch (m.t) {
       case 'hola': if (m.n) names[el()] = String(m.n).slice(0, 14); break;
-      case 'go': names = m.names || names; arranca(m.seed); break;
+      case 'cfg': if (m.o) pintaOpcV(m.o); break;
+      case 'go': names = m.names || names; arranca(m.seed, m.o); break;
       case 's':
         if (!MP.on) break;
         O.ty = +m.y; O.tr = +m.r; O.tdx = +m.dx || 0; O.th = m.th; O.e = m.e; O.x2 = m.x2; O.tb = m.tb; O.sc = m.sc; O.m = m.m; O.dd = m.dd; O.vis = true;
@@ -3546,7 +3574,7 @@ const Duo = (() => {
         break;
       }
       case 'm': if (MP.on && state === 'play') missiles.push({ x: Math.max(+m.x, camX + W + 80), y: +m.y, v: 950, fan: true }); break;
-      case 'x': O.fin = { sc: m.sc, m: m.m, d: m.dd }; O.sc = m.sc; if (!O.d) { O.d = 1; O.deadT = 0; } break;
+      case 'x': O.fin = { sc: m.sc, m: m.m, d: m.dd }; O.sc = m.sc; if (!O.d && !m.tf) { O.d = 1; O.deadT = 0; } break;
       case 're': elListo = true; pintaRev(); if (MP.role === 'host' && yoListo) empezar(); break;
       case 'bye': perdido(); cerrar(); break;
     }
@@ -3556,10 +3584,14 @@ const Duo = (() => {
   function empezar() {   // solo el anfitrión
     if (MP.role !== 'host' || !dc || dc.readyState !== 'open') return;
     const seed = (Math.random() * 2 ** 31) | 0;
-    send({ t: 'go', seed, names });
-    arranca(seed);
+    const o = opcs();
+    send({ t: 'go', seed, names, o });
+    arranca(seed, o);
   }
-  function arranca(seed) {
+  function arranca(seed, o) {
+    MP.op = Object.assign({ misil: true, laser: true, virus: true }, o || {});
+    MP.crono = sinPeligro(MP.op) ? 180 : 0; MP.stop = false; finT = 0;
+    $('#dhCrono').classList.toggle('oculto', !MP.crono); $('.dhVs').classList.toggle('oculto', !!MP.crono); pintaCrono();
     MP.on = true; MP.rng = mulberry(seed); MP.dcam = 0; fin = false; yoListo = elListo = false; endT = 0;
     Object.assign(O, { y: 360, ty: 360, r: 0, tr: 0, d: 0, dx: 0, tdx: 0, sc: 0, m: 0, dd: 0, th: 0, e: 0, x2: 0, tb: 0, fin: null, deadT: 0, vis: false });
     resize();
@@ -3588,6 +3620,21 @@ const Duo = (() => {
     if (sendT <= 0) { sendT = .05; send({ t: 's', y: Math.round(L.y * 10) / 10, r: Math.round(L.rot * 100) / 100, d: L.dead ? 1 : 0, dx: Math.round(L.dx || 0), cx: Math.round(camX + PX), sp: Math.round(speed), sc: score(), m: Math.floor(meters), dd: coins, th: holding ? 1 : 0, e: pw.escudo ? 1 : 0, x2: pw.x2 > 0 ? 1 : 0, tb: pw.turbo > 0 ? 1 : 0 }); }
     hudT -= dt; if (hudT <= 0) { hudT = .12; pintaHud(); }
     if (L.dead && O.d && !fin) { endT += dt; if (endT > 2.2 && dieT > 2) terminar(); }
+    if ((MP.crono || MP.stop) && !fin) {   // modo sin peligros: 3 minutos
+      if (!MP.stop) {
+        const antes = Math.ceil(MP.crono); MP.crono = Math.max(0, MP.crono - dt); const ahora = Math.ceil(MP.crono);
+        if (ahora !== antes) { pintaCrono(); if (ahora <= 10 && ahora > 0) { Audio5.beep(false); $('#dhCrono').classList.remove('tic'); void $('#dhCrono').offsetWidth; $('#dhCrono').classList.add('tic'); } }
+        if (MP.crono <= 0) {
+          MP.stop = true; holding = false; pintaCrono(); Audio5.beep(true); showBanner('¡TIEMPO!', 'FIN DE LA PARTIDA', '#ffd23f'); flash('#ffd23f', .3);
+          send({ t: 'x', sc: score(), m: Math.floor(meters), dd: coins, tf: 1 });
+        }
+      } else { finT += dt; if ((O.fin || !O.conn) && finT > 1.6 || finT > 4) terminar(); }
+    }
+  }
+  let finT = 0;
+  function pintaCrono() {
+    const e = $('#dhCrono'); if (!e) return; const t = Math.ceil(MP.crono);
+    e.textContent = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); e.classList.toggle('ultimos', t <= 10);
   }
   function pintaHud() {
     const a = score(), b = O.sc || 0;
