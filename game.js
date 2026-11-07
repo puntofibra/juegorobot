@@ -439,6 +439,8 @@ let holding = false, best = load('best', 0);
 let spawnX = 0, nextPower = 0, missileT = 0, lastZone = 0;
 const L = { y: 360, vy: 0, rot: 0, sx: 1, sy: 1, vis: false, inX: 0, trail: [], dead: false, spin: 0, ground: false };
 const pw = { escudo: false, iman: 0, turbo: 0, x2: 0, invul: 0 };
+const MP_H = 640;   // altura fija del mundo a dobles
+const MP = { on: false, role: null, rng: Math.random, oid: 0 };   // estado del modo 2 jugadores (ver «MODO 2 JUGADORES»)
 let coinsArr = [], lasers = [], viruses = [], missiles = [], powers = [], parts = [], texts = [], warns = [];
 
 function resize() {
@@ -446,7 +448,7 @@ function resize() {
   VW = window.innerWidth; VH = window.innerHeight;
   cv.width = Math.round(VW * DPR); cv.height = Math.round(VH * DPR);
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-  S = VH < 500 && VW > VH ? VH / 600 : Math.min(VH / 720, VW / 520); W = VW / S; H = VH / S;   // móvil en horizontal: más zoom
+  S = MP.on ? VH / MP_H : VH < 500 && VW > VH ? VH / 600 : Math.min(VH / 720, VW / 520); W = VW / S; H = VH / S;   // a dobles: misma altura de mundo en los dos dispositivos   // móvil en horizontal: más zoom
   GROUND = H - Math.min(80, H * 0.1); CEIL = 46; PX = clamp(W * (W < 700 ? 0.27 : 0.24), 125, 340);
   zonaLista = null; zonaPrep = -1; layers = buildLayers(zona); prevLayers = null; layerFade = 1; makeStars();
 }
@@ -475,14 +477,19 @@ function burst(x, y, col, n = 30, sp = 500) {
 function floatText(txt, x, y, col = '#fff', size = 22) { texts.push({ txt, x, y, col, size, life: 1, max: 1 }); }
 
 /* ---------- objetos ---------- */
-function addCoin(x, y) { coinsArr.push({ x, y, ph: Math.random() * TAU }); }
+function addCoin(x, y) { coinsArr.push({ x, y, ph: Math.random() * TAU, id: ++MP.oid }); }
 function addLaser(x, y, len, ang, rs = 0) { lasers.push({ x, y, len, ang, rs, min: 1e9, done: false, ph: Math.random() * 10 }); }
 function addVirus(x, y) { viruses.push({ x, y0: y, y, ph: Math.random() * TAU, amp: rnd(30, 90), sp: rnd(1.5, 3), rot: 0 }); }
-function addPower(x, y, t) { powers.push({ x, y0: y, y, t, ph: 0 }); }
+function addPower(x, y, t) { powers.push({ x, y0: y, y, t, ph: 0, id: ++MP.oid }); }
 
 function difficulty() { return clamp(meters / 3000, 0, 1); }
-function spawnChunk() {
-  const d = difficulty(), top = top_(), bot = bot_(), span = bot - top, mid = (top + bot) / 2;
+function spawnChunk() {   // a dobles: mismo mundo en los dos móviles (azar con semilla compartida)
+  if (!MP.on) return spawnChunk0(meters, camX + W > nextPower);
+  const R0 = Math.random; Math.random = MP.rng;
+  try { spawnChunk0(Math.max(0, (spawnX - 1500) / 40), spawnX > nextPower); } finally { Math.random = R0; }
+}
+function spawnChunk0(meters, tocaPower) {
+  const d = clamp(meters / 3000, 0, 1), top = top_(), bot = bot_(), span = bot - top, mid = (top + bot) / 2;
   let x = spawnX, w = 0;
   const r = Math.random();
   const opts = [];
@@ -495,8 +502,8 @@ function spawnChunk() {
   const tot = opts.reduce((s, o) => s + o[1], 0); let q = r * tot, kind = opts[0][0];
   for (const o of opts) { q -= o[1]; if (q <= 0) { kind = o[0]; break; } }
 
-  if (camX + W > nextPower && kind !== 'tunnel') {
-    nextPower = camX + W + rnd(2200, 3400);
+  if (tocaPower && kind !== 'tunnel') {
+    nextPower = (MP.on ? spawnX : camX + W) + rnd(2200, 3400);
     const types = ['escudo', 'iman', 'turbo', 'x2'];
     addPower(x + 40, rnd(top + 30, bot - 30), pick(types)); x += 160;
   }
@@ -548,7 +555,7 @@ function resetGame() {
   coinsArr = []; lasers = []; viruses = []; missiles = []; powers = []; parts = []; texts = []; warns = [];
   Object.assign(pw, { escudo: false, iman: 0, turbo: 0, x2: 0, invul: 0 });
   Object.assign(L, { y: (top_() + bot_()) / 2, vy: 0, rot: 0, sx: 1, sy: 1, vis: true, inX: -200, trail: [], dead: false, spin: 0, skid: [], dx: 0, dvx: 0 });
-  spawnX = W + 500; nextPower = 2400; missileT = 9; lastZone = 0;
+  spawnX = MP.on ? 1500 : W + 500; nextPower = 2400; missileT = 9; lastZone = 0; MP.oid = 0;
   if (zona !== 0) setZone(0, true);
   updHud(true);
 }
@@ -558,7 +565,7 @@ function setZone(z, instant) {
   skyFrom = [skyTop, skyBot]; skyT = instant ? 1 : 0;
   if (instant) { skyTop = ZONAS[z].top; skyBot = ZONAS[z].bot; }
 }
-function baseSpeed() { return 430 + 520 * (1 - Math.exp(-meters / 2600)); }
+function baseSpeed() { return 430 + 520 * (1 - Math.exp(-(MP.on ? camX / 40 : meters) / 2600)); }   // a dobles: la velocidad es la del mundo, igual para los dos
 
 /* ---------- colisiones ---------- */
 function segDist(px, py, x1, y1, x2, y2) {
@@ -586,7 +593,7 @@ function smashFx(x, y) {
 }
 function die() {
   if (L.dead) return;
-  L.dead = true; state = 'dying'; dieT = 0; hitStop = .14; shake = 26; flash('#ffffff', .8);
+  L.dead = true; dieT = 0; if (!MP.on) state = 'dying'; else Duo.muero(); hitStop = .14; shake = 26; flash('#ffffff', .8);
   Audio5.boom(); Audio5.thrustOff(); vib([80, 40, 160]);
   const px = camX + PX;
   burst(px, L.y, '#ff2b4e', 46, 700); burst(px, L.y, '#19ff6a', 30, 420);
@@ -620,11 +627,11 @@ function update(dt) {
     speed = lerp(speed, target, Math.min(1, dt * (pw.turbo > 0 ? 4 : 1.6)));
   } else if (state === 'dying') speed = lerp(speed, 0, Math.min(1, dt * 1.6));
   camX += speed * dt;
-  if (state === 'play') { meters += speed * dt / 40; playT += dt; if (!premioAvisado && PREMIO && SES && score() >= (MIN_HOY || PREMIO.minimo)) { premioAvisado = true; const it = ITEMS[PREMIO.tipo]; showBanner('¡OBJETO DESBLOQUEADO!', (it ? it.nom : PREMIO.tipo).toUpperCase(), '#ff9a2b'); Audio5.record(); flash('#ff9a2b', .25); } }
+  if (state === 'play' && !L.dead) { meters += speed * dt / 40; playT += dt; if (!premioAvisado && PREMIO && SES && score() >= (MIN_HOY || PREMIO.minimo)) { premioAvisado = true; const it = ITEMS[PREMIO.tipo]; showBanner('¡OBJETO DESBLOQUEADO!', (it ? it.nom : PREMIO.tipo).toUpperCase(), '#ff9a2b'); Audio5.record(); flash('#ff9a2b', .25); } }
 
   // zonas
-  const zn = Math.floor(meters / 800);
-  if (state === 'play' && meters % 800 > 560) prepZona((zn + 1) % ZONAS.length);
+  const zm = MP.on ? camX / 40 : meters, zn = Math.floor(zm / 800);
+  if (state === 'play' && zm % 800 > 560) prepZona((zn + 1) % ZONAS.length);
   if (state === 'play' && zn !== lastZone) { lastZone = zn; setZone(zn % ZONAS.length); showBanner('ZONA ' + (zn + 1), ZONAS[zn % ZONAS.length].n, ZONAS[zn % ZONAS.length].a); if (FA()) { Audio5.mascleta(); mascletaT = 2.2; } else Audio5.zone(); }
   Audio5.setIntensity(clamp(meters / 3000, 0, 1) + (pw.turbo > 0 ? .5 : 0));
 
@@ -634,11 +641,12 @@ function update(dt) {
   if (state === 'play') {
     while (spawnX < camX + W + 300) spawnChunk();
     // misiles
-    if (meters > 350) {
+    if (meters > 350 && !L.dead) {
       missileT -= dt;
       if (missileT <= 0) { warns.push({ y: L.y, t: 1.35 }); missileT = rnd(7, 13) - difficulty() * 4; if (difficulty() > .5 && Math.random() < .4) warns.push({ y: L.y + rnd(-150, 150), t: 1.7 }); }
     }
     // combo
+    if (MP.on) Duo.tick(dt);
     if (comboT > 0) { comboT -= dt; if (comboT <= 0) { combo = 0; updCombo(); } }
     // power-ups
     if (pw.iman > 0) pw.iman -= dt;
@@ -653,11 +661,11 @@ function update(dt) {
   for (let i = coinsArr.length - 1; i >= 0; i--) {
     const c = coinsArr[i];
     if (c.x < camX - 100) { coinsArr.splice(i, 1); continue; }
-    if (state !== 'play') continue;
+    if (state !== 'play' || L.dead) continue;
     let dx = px - c.x, dy = py - c.y, d = Math.hypot(dx, dy);
     if (pw.iman > 0 && d < 330 && c.x < camX + W) { const k = Math.min(1, dt * (900 / Math.max(d, 40))); c.x += dx * k; c.y += dy * k; d = Math.hypot(px - c.x, py - c.y); c.mag = true; }
     if (nearest((x, y) => Math.hypot(x - c.x, y - c.y)) < 18) {
-      coinsArr.splice(i, 1); coins++; combo++; comboT = .8;
+      coinsArr.splice(i, 1); coins++; combo++; comboT = .8; if (MP.on) Duo.send({ t: 'c', i: c.id });
       const mult = Math.min(5, 1 + Math.floor(combo / 10)) * (pw.x2 > 0 ? 2 : 1);
       bonus += 10 * mult; Audio5.coin(combo);
       for (let k = 0; k < 6; k++) P(c.x, c.y, rnd(-160, 160) + speed * .3, rnd(-160, 160), rnd(.2, .45), rnd(5, 10), '#19ff6a', 'glow', { drag: 4 });
@@ -671,7 +679,7 @@ function update(dt) {
     const l = lasers[i]; l.ang += l.rs * dt; l.ph += dt;
     const e = laserEnds(l);
     if (Math.max(e[0], e[2]) < camX - 120) { lasers.splice(i, 1); continue; }
-    if (state !== 'play' || l.dead) continue;
+    if (state !== 'play' || l.dead || L.dead) continue;
     const d = nearest((x, y) => segDist(x, y, e[0], e[1], e[2], e[3]));
     if (d < 4) { hit(px, py, () => { l.dead = true; for (let k = 0; k <= 10; k++) burst(lerp(e[0], e[2], k / 10), lerp(e[1], e[3], k / 10), HW() ? '#9dff3a' : NV() ? '#ffffff' : FA() ? '#ffd23f' : '#ff2b4e', 4, 260); lasers.splice(i, 1); }); if (L.dead) return; continue; }
     if (Math.abs(px - l.x) < l.len / 2 + 60) l.min = Math.min(l.min, d);
@@ -687,7 +695,7 @@ function update(dt) {
   for (let i = viruses.length - 1; i >= 0; i--) {
     const v = viruses[i]; v.ph += dt * v.sp; v.rot += dt * 2; v.y = v.y0 + Math.sin(v.ph) * v.amp; v.x -= 70 * dt;
     if (v.x < camX - 100) { viruses.splice(i, 1); continue; }
-    if (state !== 'play') continue;
+    if (state !== 'play' || L.dead) continue;
     if (Math.random() < .3) P(v.x + rnd(-10, 10), v.y + rnd(-10, 10), rnd(20, 80), rnd(-30, 30), .4, rnd(4, 8), HW() ? '#7a1fd6' : NV() ? '#ffd23f' : FA() ? '#ff8a1f' : '#ff2bd6', 'glow');
     if (nearest((x, y) => Math.hypot(x - v.x, y - v.y)) < 21) { hit(v.x, v.y, () => { burst(v.x, v.y, HW() ? '#b14bff' : NV() ? '#ff3b4e' : FA() ? '#ffb347' : '#ff2bd6', 30, 500); viruses.splice(i, 1); }); if (L.dead) return; }
   }
@@ -696,7 +704,7 @@ function update(dt) {
     const w = warns[i]; w.t -= dt;
     if (w.t > .35) w.y = lerp(w.y, L.y, Math.min(1, dt * 3));
     if (Math.floor(w.t * 8) !== w.lb) { w.lb = Math.floor(w.t * 8); if (w.t > 0 && w.lb % 2 === 0) Audio5.warn(); }
-    if (w.t <= 0) { warns.splice(i, 1); missiles.push({ x: camX + W + 80, y: w.y, v: 950 }); }
+    if (w.t <= 0) { warns.splice(i, 1); missiles.push({ x: camX + W + 80, y: w.y, v: 950 }); if (MP.on) Duo.send({ t: 'm', x: Math.round(camX + W + 80), y: Math.round(w.y) }); }
   }
   // misiles
   for (let i = missiles.length - 1; i >= 0; i--) {
@@ -704,20 +712,21 @@ function update(dt) {
     for (let k = 0; k < 2; k++) P(m.x + 38, m.y + rnd(-4, 4), rnd(100, 260), rnd(-40, 40), rnd(.2, .45), rnd(8, 14), pick(['#ff8a2b', '#ffd23f', '#ff2b4e']), 'glow', { drag: 2 });
     if (Math.random() < .5) P(m.x + 44, m.y, rnd(60, 160), rnd(-20, 20), rnd(.6, 1), rnd(6, 10), '', 'smoke', { drag: 1.5 });
     if (m.x < camX - 200) { missiles.splice(i, 1); continue; }
-    if (state !== 'play') continue;
+    if (state !== 'play' || L.dead || m.fan) continue;   // los misiles del rival (en gris) no te dan
     if (nearest((x, y) => Math.hypot(x - m.x, y - m.y)) < 12) { hit(m.x, m.y, () => { burst(m.x, m.y, '#ff8a2b', 34, 600); missiles.splice(i, 1); }); if (L.dead) return; }
   }
   // power-ups
   for (let i = powers.length - 1; i >= 0; i--) {
     const p = powers[i]; p.ph += dt; p.y = p.y0 + Math.sin(p.ph * 2.5) * 16;
     if (p.x < camX - 100) { powers.splice(i, 1); continue; }
-    if (state !== 'play') continue;
-    if (nearest((x, y) => Math.hypot(x - p.x, y - p.y)) < 30) { powers.splice(i, 1); takePower(p.t, p.x, p.y); }
+    if (state !== 'play' || L.dead) continue;
+    if (nearest((x, y) => Math.hypot(x - p.x, y - p.y)) < 30) { powers.splice(i, 1); takePower(p.t, p.x, p.y); if (MP.on) Duo.send({ t: 'p', i: p.id, k: p.t }); }
   }
   updParts(dt);
   // texto flotante (tiempo real)
   for (let i = texts.length - 1; i >= 0; i--) { const tx = texts[i]; tx.life -= rdt * .9; tx.y -= 50 * rdt; if (tx.life <= 0) texts.splice(i, 1); }
 
+  if (MP.on && L.dead && state === 'play') { dieT += rdt; timeScale = dieT < .5 ? lerp(.35, 1, dieT * 2) : 1; }
   if (state === 'dying') { dieT += rdt; timeScale = dieT < .5 ? lerp(.35, 1, dieT * 2) : 1; if (dieT > 2.4) gameOver(); }
   updHud();
 }
@@ -739,7 +748,7 @@ function updLucas(dt, rdt) {
   if (L.dead) {
     L.swapT += rdt;
     const gy = GROUND - DH * .44, wx = camX + PX + L.dx;
-    L.vy += 2000 * dt; L.y += L.vy * dt; L.dx += L.dvx * dt;
+    L.vy += 2000 * dt; L.y += L.vy * dt; L.dx += L.dvx * dt; if (MP.on) L.dx -= speed * dt;   // a dobles la cámara sigue: Lucas se queda atrás
     if (!L.landed) {
       L.rot = lerp(L.rot, .18, Math.min(1, dt * 6));
       if (L.y >= gy) {                       // impacto con el suelo
@@ -845,6 +854,7 @@ function render() {
   drawParts(false);
   ctx.restore();
   drawWarns(t);
+  if (MP.on) Duo.drawGhost(t);   // el rival: detrás y en gris
   drawLucas(t);
   if (NV()) drawNieve(t, 1);
   if (pw.turbo > 0 && state === 'play') drawSpeedLines(t);
@@ -1022,9 +1032,16 @@ function drawViruses(t) {
 }
 function drawMissiles(t) {
   for (const m of missiles) {
-    if (HW()) { drawCuchillo(m, t); continue; }
-    if (NV()) { drawCarambano(m, t); continue; }
-    if (FA()) { drawCohete(m, t); continue; }
+    if (m.fan) { ctx.save(); ctx.globalAlpha = .35; ctx.filter = 'grayscale(1)'; }
+    drawMissile1(m, t);
+    if (m.fan) ctx.restore();
+  }
+}
+function drawMissile1(m, t) {
+  {
+    if (HW()) { drawCuchillo(m, t); return; }
+    if (NV()) { drawCarambano(m, t); return; }
+    if (FA()) { drawCohete(m, t); return; }
     ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowSpr('#ff8a2b'), m.x + 10, m.y - 30, 70, 60); ctx.globalCompositeOperation = 'source-over';
     ctx.save(); ctx.translate(m.x, m.y);
     const g = ctx.createLinearGradient(0, -9, 0, 9); g.addColorStop(0, '#e8edf5'); g.addColorStop(1, '#6b768a');
@@ -1269,6 +1286,7 @@ const FRASES_F = ['¡Bones Falles!', '¡Que empiece la mascletà!', 'Cuidado con
 const FRASES = (TEMA === 'halloween' ? FRASES_H : TEMA === 'navidad' ? FRASES_X : TEMA === 'fallas' ? FRASES_F : FRASES_N).slice();
 let fraseI = 0, fraseTimer;
 function goMenu() {
+  if (MP.on || MP.role) Duo.salir();
   state = 'menu'; L.vis = false; Audio5.mode('menu'); Audio5.thrustOff();
   if (temaPendiente) aplicaTema(temaPendiente, false, true);
   $('#hud').classList.add('oculto'); $('#btnPausa').classList.add('oculto');
@@ -1320,7 +1338,8 @@ function startGame() {
     if (i === 3) { state = 'play'; $('#btnPausa').classList.remove('oculto'); setTimeout(() => el.innerHTML = '', 700); showBanner('ZONA 1', ZONAS[0].n, ZONAS[0].a); }
   }, i * 650));
 }
-function pause() { if (state !== 'play') return; state = 'pause'; holding = false; Audio5.thrustOff(); show('#sPausa', true); }
+function pause() { if (state !== 'play' || MP.on) return;   // a dobles no se puede pausar
+  state = 'pause'; holding = false; Audio5.thrustOff(); show('#sPausa', true); }
 function resume() { show(null); state = 'play'; Audio5.click(); }
 
 let lastResult = null;
@@ -1401,21 +1420,22 @@ function retoCartel(d, pts) {
 }
 function enviar() {
   if (!lastResult || lastResult.pts <= 0 || !SES) return;
-  if (!PARTIDA) { $('#envio').textContent = 'No se pudo validar la partida (sin conexión al empezar)'; return; }
+  const ENV = $(MP.on ? '#dfEnvio' : '#envio');
+  if (!PARTIDA) { ENV.textContent = 'No se pudo validar la partida (sin conexión al empezar)'; return; }
   const r = lastResult, partida = PARTIDA, f = firma([SES.perfil.usuario, r.pts, r.m, r.d, r.dur, partida].join('|')); PARTIDA = null;
-  $('#envio').textContent = 'Guardando en el ranking…';
+  ENV.textContent = 'Guardando en el ranking…';
   bloqueaOtra(true);
   const limite = new Promise(res => setTimeout(() => res({ ok: false, error: 'El ranking está tardando demasiado. Inténtalo más tarde.' }), 25000));
   Promise.race([api('enviar', { token: SES.token, puntos: r.pts, metros: r.m, datos: r.d, dur: r.dur, partida, firma: f }), limite])
     .then(d => {
       if (d.ok) {
         SES.perfil.partidas++; if (d.nuevoRecord) SES.perfil.record = r.pts; store('ses', SES);
-        $('#envio').innerHTML = `Ranking semanal: puesto <b style="color:#19ff6a">#${d.puesto}</b>` + (d.nuevoRecord ? ' · <b style="color:#ffd23f">¡récord personal guardado!</b>' : '');
+        ENV.innerHTML = `Ranking semanal: puesto <b style="color:#19ff6a">#${d.puesto}</b>` + (d.nuevoRecord ? ' · <b style="color:#ffd23f">¡récord personal guardado!</b>' : '');
         (d.items || (d.item ? [d.item] : [])).forEach((it, i) => setTimeout(() => mostrarItemGanado(it, i > 0), i * 1400));
         if (d.siguiente) { MIN_HOY = d.siguiente; retoCartel(d, r.pts); }
-      } else $('#envio').textContent = d.error || 'No se pudo guardar';
+      } else ENV.textContent = d.error || 'No se pudo guardar';
     })
-    .catch(() => $('#envio').textContent = 'Sin conexión con el ranking')
+    .catch(() => ENV.textContent = 'Sin conexión con el ranking')
     .finally(() => bloqueaOtra(false));
 }
 let rkData = null, rkTab = 'semana';
@@ -1467,16 +1487,16 @@ window.addEventListener('pointerup', up); window.addEventListener('pointercancel
 cv.addEventListener('contextmenu', e => e.preventDefault());
 window.addEventListener('keydown', e => {
   if (e.repeat) return;
-  if (['Space', 'ArrowUp', 'KeyW'].includes(e.code)) { if (state === 'play') { holding = true; e.preventDefault(); } else if (['count', 'dying'].includes(state)) e.preventDefault(); else if (state === 'menu' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); startGame(); } }
+  if (['Space', 'ArrowUp', 'KeyW'].includes(e.code)) { if (state === 'play') { holding = true; e.preventDefault(); } else if (['count', 'dying'].includes(state)) e.preventDefault(); else if (state === 'menu' && $('#sMenu').classList.contains('show') && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); elegirModo(); } }
   if (e.code === 'Escape' || e.code === 'KeyP') { if (state === 'play') pause(); else if (state === 'pause') resume(); }
-  if (e.code === 'Enter' && state === 'over' && document.activeElement.tagName !== 'INPUT') startGame();
+  if (e.code === 'Enter' && state === 'over' && !MP.on && document.activeElement.tagName !== 'INPUT') startGame();
 });
 window.addEventListener('keyup', e => { if (['Space', 'ArrowUp', 'KeyW'].includes(e.code)) { holding = false; if (['play', 'count', 'dying', 'pause'].includes(state) && e.code === 'Space') e.preventDefault(); } });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 window.addEventListener('blur', () => { holding = false; });
 window.addEventListener('resize', () => { resize(); });
 
-$('#btnJugar').onclick = startGame;
+$('#btnJugar').onclick = () => elegirModo();
 /* ---- salir del juego ---- */
 $('#btnCerrar').onclick = () => {
   confirma({ ico: '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 3v8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>', titulo: 'Salir del juego', html: '¿Seguro que quieres salir de <b>LUCASBOT 5G</b>?', si: 'Salir', no: 'Seguir jugando', peligro: true }).then(si => {
@@ -1808,7 +1828,7 @@ requestAnimationFrame(loop);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---- actualización automática: si hay una versión nueva, se recarga sola en el menú ---- */
-const VERSION = 38;   // subir este número (y version.json) en cada actualización
+const VERSION = 39;   // subir este número (y version.json) en cada actualización
 let nuevaVersion = 0, actualizando = false, ultVer = 0;
 function compruebaVersion(forzar) {
   if (actualizando || (!forzar && Date.now() - ultVer < 30000)) return; ultVer = Date.now();
@@ -3337,4 +3357,337 @@ textosTema(); document.body.classList.toggle('pruebas', !!TEMA_PRUEBA);
   window.addEventListener('resize', () => { if (CHAT_ON) tam(); });
   window.addEventListener('keydown', e => { if (CHAT_ON && e.code === 'Escape' && document.activeElement !== $('#chatTxt')) cerrarChat(); });
   window.addEventListener('pagehide', () => { if (CHAT_ON && SES) navigator.sendBeacon && navigator.sendBeacon(CFG.API, JSON.stringify({ accion: 'chat', op: 'salir', token: SES.token })); });
+})();
+
+/* =========================================================
+   MODO 2 JUGADORES (a tiempo real)
+   Conexión directa entre los dos dispositivos (WebRTC DataChannel).
+   Apps Script solo guarda la invitación del QR para emparejarlos.
+   Los dos generan el MISMO mundo (semilla compartida); cada uno
+   mueve su Lucas en local y manda su posición 20 veces por segundo.
+   ========================================================= */
+function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const escH = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nfmt = v => Math.round(v || 0).toLocaleString('es-ES');
+
+/* ---- elegir 1 o 2 jugadores ---- */
+function elegirModo() {
+  if (['play', 'count', 'dying'].includes(state)) return;
+  if (guardando) { toast('Espera un momento, guardando tu puntuación…'); return; }
+  if ($('#sInv').classList.contains('show') || CHAT_ON) return;
+  Audio5.init(); Audio5.click(); show('#sModo', true);
+}
+$('#btnModo1').onclick = () => { Audio5.click(); show(null); startGame(); };
+$('#btnModo2').onclick = () => {
+  Audio5.click();
+  if (!('RTCPeerConnection' in window)) { toast('Este navegador no permite jugar a 2 jugadores'); return; }
+  if (!SES) { trasSesion = () => Duo.host(); abrirLogin('entrar'); return; }
+  Duo.host();
+};
+$('#btnModoX').onclick = () => { Audio5.click(); show('#sMenu'); };
+
+const Duo = (() => {
+  const ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }] };
+  let pc = null, dc = null, code = '', pollT = 0, failT = 0, sendT = 0, hudT = 0, endT = 0, fin = false;
+  let names = ['', ''], yoListo = false, elListo = false;
+  const O = { y: 360, ty: 360, r: 0, tr: 0, d: 0, dx: 0, tdx: 0, sc: 0, m: 0, dd: 0, th: 0, e: 0, x2: 0, tb: 0, fl: .5, conn: false, fin: null, deadT: 0, vis: false };
+  let grisV = null, grisC = null;
+  const yo = () => MP.role === 'host' ? 0 : 1, el = () => 1 - yo();
+  const miNombre = () => (SES && SES.perfil.usuario) || load('duoNom', '') || '';
+
+  function send(o) { try { if (dc && dc.readyState === 'open') dc.send(JSON.stringify(o)); } catch (e) {} }
+  function waitIce() {
+    return new Promise(res => {
+      if (pc.iceGatheringState === 'complete') return res();
+      const t = setTimeout(res, 3500);
+      pc.addEventListener('icegatheringstatechange', () => { if (pc && pc.iceGatheringState === 'complete') { clearTimeout(t); res(); } });
+    });
+  }
+  function cerrar(bye) {
+    if (bye) send({ t: 'bye' });
+    clearInterval(pollT); clearTimeout(failT); pollT = 0;
+    const d = dc, p = pc; dc = pc = null;
+    setTimeout(() => { try { d && d.close(); } catch (e) {} try { p && p.close(); } catch (e) {} }, bye ? 250 : 0);
+  }
+  function salir() {
+    cerrar(true); MP.role = null; O.conn = false;
+    if (MP.on) { MP.on = false; resize(); }
+    $('#duoHud').classList.add('oculto'); $('#duoSpect').classList.add('oculto');
+    if (location.search.includes('duo=')) history.replaceState(null, '', location.pathname);
+  }
+  function pantalla(html) { $('#duoCaja').innerHTML = html; show('#sDuo', true); }
+  function fallo(txt) {
+    if (dc && dc.readyState === 'open') return;
+    toast(txt || 'No se ha podido conectar. Poneos los dos en la misma wifi e inténtalo otra vez.');
+    salir(); goMenu();
+  }
+  function setupDc(ch) {
+    dc = ch;
+    dc.onopen = () => {
+      clearTimeout(failT); O.conn = true;
+      send({ t: 'hola', n: names[yo()] });
+      if (MP.role === 'host') {
+        Audio5.record();
+        $('#duoEst').innerHTML = `<b class="duoOk">¡${escH(names[1] || 'Tu rival')} se ha unido!</b><br>Empieza la partida…`;
+        setTimeout(empezar, 1400);
+      } else pantalla(`<img src="img/mando.webp" class="lucasImg media flota" alt=""><h2>¡CONECTADO!</h2><p class="duoTxt">Esperando a que <b>${escH(names[0])}</b> empiece la partida…</p><div class="duoSpin"></div>`);
+    };
+    dc.onclose = () => perdido();
+    dc.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } recibe(m); };
+  }
+  function perdido() {
+    if (!O.conn) return; O.conn = false;
+    if (MP.on && state === 'play' && !fin) {
+      toast((names[el()] || 'Tu rival') + ' se ha desconectado');
+      if (!O.d) { O.d = 1; O.fin = O.fin || { sc: O.sc, m: O.m, d: O.dd }; O.deadT = 0; }
+    } else if ($('#sDuo').classList.contains('show')) { toast('Se ha cortado la conexión'); salir(); goMenu(); }
+    else if ($('#sDuoFin').classList.contains('show')) { $('#dfRev').disabled = true; $('#dfEst').textContent = (names[el()] || 'Tu rival') + ' se ha ido'; }
+  }
+
+  /* ---- ANFITRIÓN: crea la sala y enseña el QR ---- */
+  async function host() {
+    salir(); MP.role = 'host'; names = [miNombre() || 'Jugador 1', ''];
+    pantalla(`<h2>2 JUGADORES</h2><p class="duoTxt">Preparando la sala…</p><div class="duoSpin"></div><button class="btn ter" id="duoCan">Cancelar</button>`);
+    $('#duoCan').onclick = () => { salir(); goMenu(); };
+    try {
+      pc = new RTCPeerConnection(ICE);
+      setupDc(pc.createDataChannel('lucas', { ordered: true }));
+      await pc.setLocalDescription(await pc.createOffer()); await waitIce();
+      const [r] = await Promise.all([api('duo_crear', { sdp: pc.localDescription.sdp, nombre: names[0] }), qrLib()]);
+      if (!r.ok) throw new Error(r.error || 'No se pudo crear la sala');
+      if (MP.role !== 'host') return;
+      code = r.code;
+      const url = CFG.URL.replace(/\/?$/, '/') + '?duo=' + code;
+      pantalla(`<div class="duoHost">
+        <div class="duoQr" id="duoQr"></div>
+        <div class="duoInfo">
+          <h2>2 JUGADORES</h2>
+          <p class="duoTxt">Tu rival escanea este código con su móvil y entra directo, <b>sin cuenta</b></p>
+          <div class="duoCode">${code}</div>
+          <div class="duoEst" id="duoEst"><div class="duoSpin peq"></div>Esperando a tu rival…</div>
+          <div class="fila"><button class="btn sec" id="duoSh">Enviar enlace</button><button class="btn ter" id="duoCan">Cancelar</button></div>
+        </div></div>`);
+      try { const q = qrcode(0, 'M'); q.addData(url); q.make(); $('#duoQr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); } catch (e) { $('#duoQr').textContent = url; }
+      $('#duoSh').onclick = () => { const text = '🤖🤖 ¡Te reto a LUCASBOT 5G! Entra y vuela contra mí (sala ' + code + ')'; if (navigator.share) navigator.share({ title: 'LUCASBOT 5G', text, url }).catch(() => {}); else window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + url), '_blank'); };
+      $('#duoCan').onclick = () => { salir(); goMenu(); };
+      let ocupado = false;
+      pollT = setInterval(async () => {
+        if (ocupado || !pc) return; ocupado = true;
+        const s = await api('duo_ver', { code, rol: 'host' }); ocupado = false;
+        if (!pc || MP.role !== 'host') return;
+        if (!s.ok) { if (/caducado|no existe/.test(s.error || '')) { clearInterval(pollT); const e = $('#duoEst'); if (e) e.textContent = '⌛ La sala ha caducado. Vuelve a crearla.'; } return; }
+        if (s.a && !pc.remoteDescription) {
+          clearInterval(pollT); names[1] = s.gn || 'Invitado';
+          const e = $('#duoEst'); if (e) e.innerHTML = `<b>${escH(names[1])}</b> se está uniendo…`;
+          try { await pc.setRemoteDescription({ type: 'answer', sdp: s.a }); } catch (err) { fallo(); }
+          failT = setTimeout(() => fallo(), 20000);
+        }
+      }, 1300);
+    } catch (e) { toast(String(e.message || e)); salir(); goMenu(); }
+  }
+  function qrLib() {
+    if (window.qrcode) return Promise.resolve();
+    return new Promise((ok, ko) => { const s = document.createElement('script'); s.src = 'js/qrcode.min.js?v=1'; s.onload = ok; s.onerror = ko; document.head.appendChild(s); });
+  }
+
+  /* ---- INVITADO: entra desde el QR, sin cuenta ---- */
+  function invitado(c) {
+    code = String(c || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+    pantalla(`<img src="img/saluda.webp" class="lucasImg media flota" alt="">
+      <h2>¡TE HAN RETADO!</h2>
+      <p class="duoTxt">Vas a volar contra tu rival en la sala <b class="duoMini">${code}</b>. No necesitas cuenta.</p>
+      <input class="duoInp" id="duoNom" maxlength="14" placeholder="Tu nombre" value="${escH(miNombre())}" autocomplete="nickname">
+      <button class="btn jugar peq" id="duoGo">¡A VOLAR!</button>
+      <button class="btn ter" id="duoNo">Ahora no</button>`);
+    $('#duoGo').onclick = () => { const n = $('#duoNom').value.trim().slice(0, 14); if (!n) { toast('Escribe tu nombre'); return; } store('duoNom', n); Audio5.init(); Audio5.click(); unir(n); };
+    $('#duoNom').onkeydown = e => { if (e.key === 'Enter') $('#duoGo').click(); };
+    $('#duoNo').onclick = () => { salir(); goMenu(); };
+  }
+  async function unir(nombre) {
+    cerrar(); MP.role = 'guest'; names = ['', nombre];
+    pantalla(`<h2>CONECTANDO…</h2><p class="duoTxt">Entrando en la sala <b class="duoMini">${code}</b></p><div class="duoSpin"></div><button class="btn ter" id="duoCan">Cancelar</button>`);
+    $('#duoCan').onclick = () => { salir(); goMenu(); };
+    try {
+      const s = await api('duo_ver', { code, rol: 'guest' });
+      if (!s.ok) throw new Error(s.error || 'No se pudo entrar en la sala');
+      names[0] = s.hn || 'Anfitrión';
+      pc = new RTCPeerConnection(ICE);
+      pc.ondatachannel = ev => setupDc(ev.channel);
+      await pc.setRemoteDescription({ type: 'offer', sdp: s.o });
+      await pc.setLocalDescription(await pc.createAnswer()); await waitIce();
+      const r = await api('duo_unir', { code, sdp: pc.localDescription.sdp, nombre });
+      if (!r.ok) throw new Error(r.error || 'No se pudo entrar en la sala');
+      const t = $('#duoCaja .duoTxt'); if (t) t.innerHTML = `Conectando con <b>${escH(names[0])}</b>…`;
+      failT = setTimeout(() => fallo(), 20000);
+    } catch (e) { toast(String(e.message || e)); salir(); goMenu(); }
+  }
+
+  /* ---- mensajes ---- */
+  function recibe(m) {
+    switch (m.t) {
+      case 'hola': if (m.n) names[el()] = String(m.n).slice(0, 14); break;
+      case 'go': names = m.names || names; arranca(m.seed); break;
+      case 's':
+        if (!MP.on) break;
+        O.ty = +m.y; O.tr = +m.r; O.tdx = +m.dx || 0; O.th = m.th; O.e = m.e; O.x2 = m.x2; O.tb = m.tb; O.sc = m.sc; O.m = m.m; O.dd = m.dd; O.vis = true;
+        if (m.d && !O.d) { O.d = 1; O.deadT = 0; O.dx = O.tdx; }
+        if (state === 'play') {   // la cámara: el que va por detrás alcanza al otro (así no se separan los mundos)
+          const pred = m.cx + m.sp * .05, dif = pred - (camX + PX);   // cx = posición de su Lucas en el mundo
+          if (dif > 600) camX += dif; else if (dif > 1) MP.dcam = dif;
+        }
+        break;
+      case 'c': for (let i = coinsArr.length - 1; i >= 0; i--) if (coinsArr[i].id === m.i) { const c = coinsArr[i]; coinsArr.splice(i, 1); P(c.x, c.y, 0, 0, .3, 9, '#9aa3ad', 'ring', { grow: 40 }); break; } break;
+      case 'p': {
+        for (let i = powers.length - 1; i >= 0; i--) if (powers[i].id === m.i) { const p = powers[i]; powers.splice(i, 1); burst(p.x, p.y, '#8b939c', 14, 300); break; }
+        if (m.k === 'turbo' && MP.on && state === 'play') {   // el turbo es para los dos
+          pw.turbo = pwMax.turbo; shake = 10; flash('#ffd23f', .25); Audio5.power(); vib(40);
+          floatText('¡TURBO DE ' + (names[el()] || 'TU RIVAL').toUpperCase() + '!', PX, (L.dead ? H / 2 : L.y) - 80, '#ffd23f', 24); updPwHud();
+        }
+        break;
+      }
+      case 'm': if (MP.on && state === 'play') missiles.push({ x: Math.max(+m.x, camX + W + 80), y: +m.y, v: 950, fan: true }); break;
+      case 'x': O.fin = { sc: m.sc, m: m.m, d: m.dd }; O.sc = m.sc; if (!O.d) { O.d = 1; O.deadT = 0; } break;
+      case 're': elListo = true; pintaRev(); if (MP.role === 'host' && yoListo) empezar(); break;
+      case 'bye': perdido(); cerrar(); break;
+    }
+  }
+
+  /* ---- partida ---- */
+  function empezar() {   // solo el anfitrión
+    if (MP.role !== 'host' || !dc || dc.readyState !== 'open') return;
+    const seed = (Math.random() * 2 ** 31) | 0;
+    send({ t: 'go', seed, names });
+    arranca(seed);
+  }
+  function arranca(seed) {
+    MP.on = true; MP.rng = mulberry(seed); MP.dcam = 0; fin = false; yoListo = elListo = false; endT = 0;
+    Object.assign(O, { y: 360, ty: 360, r: 0, tr: 0, d: 0, dx: 0, tdx: 0, sc: 0, m: 0, dd: 0, th: 0, e: 0, x2: 0, tb: 0, fin: null, deadT: 0, vis: false });
+    resize();
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    PARTIDA = null;
+    if (SES) api('inicio', { token: SES.token }).then(d => { if (d.ok) { PARTIDA = d.partida; if (d.minimo) MIN_HOY = d.minimo; } });
+    Audio5.init(); clearInterval(fraseTimer);
+    show(null); resetGame(); state = 'count'; Audio5.mode('game');
+    $('#hud').classList.remove('oculto'); $('#btnPausa').classList.add('oculto'); updPwHud(); updCombo();
+    $('#duoSpect').classList.add('oculto');
+    $('#dhYoN').textContent = 'TÚ'; $('#dhElN').textContent = names[el()] || 'RIVAL'; $('#duoHud').classList.remove('oculto'); pintaHud();
+    const seq = ['3', '2', '1', '¡VUELA!'], ce = $('#cuenta');
+    Audio5.launch();
+    seq.forEach((s, i) => setTimeout(() => {
+      if (!MP.on) return;
+      ce.innerHTML = `<span class="${i === 3 ? 'go' : ''}">${s}</span>`; Audio5.beep(i === 3);
+      if (i === 3) { state = 'play'; setTimeout(() => ce.innerHTML = '', 700); showBanner('VS', (names[el()] || 'RIVAL').toUpperCase(), '#00e5ff'); }
+    }, i * 650));
+  }
+  function tick(dt) {   // cada fotograma en partida
+    if (MP.dcam > 0) { const k = MP.dcam * Math.min(1, dt * 6); camX += k; MP.dcam -= k; if (MP.dcam < .5) MP.dcam = 0; }
+    O.y = lerp(O.y, O.ty, Math.min(1, dt * 16)); O.r = lerp(O.r, O.tr, Math.min(1, dt * 12)); O.dx = lerp(O.dx, O.tdx, Math.min(1, dt * 12));
+    O.fl = lerp(O.fl, O.tb ? 1.7 : O.th ? 1.15 : .5, Math.min(1, dt * 10));
+    if (O.d) O.deadT += dt;
+    sendT -= dt;
+    if (sendT <= 0) { sendT = .05; send({ t: 's', y: Math.round(L.y * 10) / 10, r: Math.round(L.rot * 100) / 100, d: L.dead ? 1 : 0, dx: Math.round(L.dx || 0), cx: Math.round(camX + PX), sp: Math.round(speed), sc: score(), m: Math.floor(meters), dd: coins, th: holding ? 1 : 0, e: pw.escudo ? 1 : 0, x2: pw.x2 > 0 ? 1 : 0, tb: pw.turbo > 0 ? 1 : 0 }); }
+    hudT -= dt; if (hudT <= 0) { hudT = .12; pintaHud(); }
+    if (L.dead && O.d && !fin) { endT += dt; if (endT > 2.2 && dieT > 2) terminar(); }
+  }
+  function pintaHud() {
+    const a = score(), b = O.sc || 0;
+    $('#dhYoP').textContent = nfmt(a); $('#dhElP').textContent = nfmt(b);
+    $('#dhYo').classList.toggle('lider', a > b); $('#dhEl').classList.toggle('lider', b > a);
+    $('#dhYo').classList.toggle('muerto', L.dead); $('#dhEl').classList.toggle('muerto', !!O.d);
+  }
+  function muero() {   // me han eliminado: sigo viendo la partida
+    send({ t: 'x', sc: score(), m: Math.floor(meters), dd: coins });
+    setTimeout(() => {
+      if (!MP.on || fin || O.d) return;
+      $('#dsTxt').innerHTML = `Has hecho <b>${nfmt(score())}</b> puntos. Mirando a <b>${escH(names[el()] || 'tu rival')}</b>…`;
+      $('#duoSpect').classList.remove('oculto');
+    }, 1300);
+  }
+  function terminar() {
+    fin = true; state = 'over'; Audio5.thrustOff(); Audio5.mode('menu');
+    $('#hud').classList.add('oculto'); $('#duoSpect').classList.add('oculto'); $('#duoHud').classList.add('oculto');
+    const a = score(), b = O.fin ? O.fin.sc : O.sc, gano = a > b, empate = a === b;
+    if (a > best) { best = a; store('best', best); }
+    lastResult = { pts: a, m: Math.floor(meters), d: coins, dur: Math.round(playT * 1000) };
+    $('#dfTit').textContent = empate ? '¡EMPATE!' : gano ? '¡HAS GANADO!' : '¡HA GANADO ' + (names[el()] || 'TU RIVAL').toUpperCase() + '!';
+    $('#dfTit').className = empate ? '' : gano ? 'gana' : 'pierde';
+    $('#dfImg').src = 'img/' + (gano || empate ? 'celebra' : 'caido') + '.webp'; $('#dfImg').classList.toggle('caido', !(gano || empate));
+    $('#dfYoN').textContent = names[yo()] || 'Tú'; $('#dfElN').textContent = names[el()] || 'Rival';
+    countUp('#dfYoP', a); countUp('#dfElP', b);
+    $('#dfYoS').textContent = `${nfmt(lastResult.m)} m · ${nfmt(coins)} datos`;
+    $('#dfElS').textContent = O.fin ? `${nfmt(O.fin.m)} m · ${nfmt(O.fin.d)} datos` : '';
+    $('#dfYo').classList.toggle('gana', gano); $('#dfEl').classList.toggle('gana', !gano && !empate);
+    $('#dfEnvio').textContent = '';
+    $('#dfRev').disabled = !O.conn; pintaRev();
+    show('#sDuoFin', true);
+    if (gano) { Audio5.record(); confetti(); }
+    if (SES) enviar();
+  }
+  function pintaRev() {
+    const e = $('#dfEst'); if (!e) return;
+    if (!O.conn) { e.textContent = (names[el()] || 'Tu rival') + ' se ha ido'; return; }
+    e.innerHTML = yoListo && !elListo ? `Esperando a <b>${escH(names[el()])}</b>…` : elListo && !yoListo ? `<b>${escH(names[el()])}</b> quiere la revancha` : '';
+    $('#dfRev').classList.toggle('guardando', yoListo);
+  }
+  function revancha() {
+    if (!O.conn || yoListo) return;
+    Audio5.click(); yoListo = true; send({ t: 're' }); pintaRev();
+    if (MP.role === 'host' && elListo) empezar();
+  }
+
+  /* ---- el rival: detrás de ti y en escala de grises ---- */
+  function gris(im, h) {
+    try {
+      const w = Math.round(h * im.naturalWidth / im.naturalHeight), c = off(w, h), g = c.getContext('2d');
+      g.drawImage(im, 0, 0, w, h);
+      const d = g.getImageData(0, 0, w, h), p = d.data;
+      for (let i = 0; i < p.length; i += 4) { const v = (p[i] * .3 + p[i + 1] * .59 + p[i + 2] * .11) * .85; p[i] = p[i + 1] = p[i + 2] = v; }
+      g.putImageData(d, 0, 0); return c;
+    } catch (e) { return im; }
+  }
+  function drawGhost(t) {
+    if (!O.vis || state === 'menu' || state === 'over') return;
+    if (!grisV && IMG.superlucas.complete) { grisV = gris(IMG.superlucas, 260); grisC = gris(IMG.caido, 260); }
+    if (!grisV) return;
+    const x = PX + (O.d ? O.dx : 0), y = O.y;
+    if (O.d) {   // caído en el suelo, se queda atrás
+      if (x < -DW) return;
+      ctx.save(); ctx.globalAlpha = .6; ctx.translate(x, GROUND); ctx.rotate(O.r);
+      ctx.drawImage(grisC, -DW / 2, -(GROUND - y) - DH * .5, DW, DH); ctx.restore();
+    } else {
+      const mirando = L.dead;   // si ya te han eliminado, el rival se ve a color
+      ctx.save(); ctx.globalAlpha = mirando ? 1 : .62; ctx.translate(x, y + Math.sin(t * 3 + 1) * 2); ctx.rotate(O.r);
+      ctx.globalCompositeOperation = 'lighter';
+      NOZZ.forEach(([rx, ry, k], i) => {
+        const fx = (rx - AX) * LW, fy = (ry - AY) * LH, w = 17 * k, len = (78 + Math.sin(t * 31 + i * 2) * 6 + Math.random() * 6) * O.fl * k;
+        jetFlame(ctx, fx, fy, FLAME_ANG, w * 1.1, len, 0, [[0, 'rgba(255,255,255,.7)'], [.5, 'rgba(170,178,188,.45)'], [1, 'rgba(120,128,138,0)']]);
+      });
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(mirando ? IMG.superlucas : grisV, -AX * LW, -AY * LH, LW, LH);
+      if (O.e) { ctx.strokeStyle = 'rgba(200,210,220,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(-14, 0, 108, 64, 0, 0, TAU); ctx.stroke(); }
+      ctx.restore();
+    }
+    // nombre del rival
+    ctx.save(); ctx.globalAlpha = .75; ctx.font = '700 15px Rajdhani, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const ty = O.d ? GROUND - DH - 10 : y - LH * .72, nm = (names[el()] || 'RIVAL').toUpperCase() + (O.x2 && !O.d ? '  x2' : '');
+    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.strokeText(nm, x, ty); ctx.fillStyle = '#c9d0d8'; ctx.fillText(nm, x, ty);
+    ctx.restore();
+  }
+
+  $('#dfRev').onclick = revancha;
+  $('#dfMenu').onclick = () => { Audio5.click(); salir(); goMenu(); };
+  $('#dfComp').onclick = () => {
+    const a = lastResult ? lastResult.pts : 0, b = O.fin ? O.fin.sc : O.sc;
+    compartir(a > b ? `🏆 ¡Le he ganado a ${names[el()]} en LUCASBOT 5G por ${nfmt(a)} a ${nfmt(b)}! ¿Te atreves conmigo?` : `🤖🤖 He jugado a dobles en LUCASBOT 5G: ${nfmt(a)} a ${nfmt(b)}. ¿Te atreves conmigo?`);
+  };
+  $('#dsSalir').onclick = () => confirma({ ico: '?', titulo: 'Salir de la partida', html: 'Tu rival seguirá jugando solo. ¿Salir al menú?', si: 'Salir', no: 'Seguir mirando', peligro: true }).then(s => { if (s) { salir(); goMenu(); } });
+
+  return { host, invitado, send, salir, tick, muero, drawGhost, get role() { return MP.role; } };
+})();
+
+/* el invitado abre el juego desde el QR: ?duo=ABCD */
+(() => {
+  const c = new URLSearchParams(location.search).get('duo');
+  if (!c) return;
+  const espera = setInterval(() => { if (state === 'menu') { clearInterval(espera); Duo.invitado(c); } }, 200);
 })();

@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=28">
+<link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -43,6 +43,8 @@
   <div id="hPw"></div>
 </div>
 <div id="banner"></div>
+<div id="duoHud" class="oculto"><div id="dhYo" class="dh yo"><i>👑</i><small id="dhYoN">TÚ</small><b id="dhYoP">0</b></div><span class="dhVs">VS</span><div id="dhEl" class="dh el"><b id="dhElP">0</b><small id="dhElN">RIVAL</small><i>👑</i></div></div>
+<div id="duoSpect" class="oculto"><div class="dsCaja"><b>¡TE HAN ELIMINADO!</b><span id="dsTxt"></span><button id="dsSalir" class="btn ter mini">Salir</button></div></div>
 <div id="cuenta"></div>
 
 <!-- Carga -->
@@ -143,6 +145,51 @@
         <button id="btnFinComp" class="btn sec">Compartir</button>
       </div>
       <button id="btnFinMenu" class="btn ter">Menú</button>
+    </div>
+  </div>
+</section>
+
+<!-- Elegir modo: 1 o 2 jugadores -->
+<section id="sModo" class="screen">
+  <div class="card modoCard">
+    <h2>¿CÓMO QUIERES VOLAR?</h2>
+    <div class="modos">
+      <button id="btnModo1" class="modo m1">
+        <span class="mImgs"><img src="img/superlucas.webp" alt=""></span>
+        <b>1 JUGADOR</b><small>Vuela solo y bate tu récord</small>
+      </button>
+      <button id="btnModo2" class="modo m2">
+        <span class="mImgs"><img src="img/superlucas.webp" alt="" class="gris"><img src="img/superlucas.webp" alt=""></span>
+        <b>2 JUGADORES</b><small>Reta a un amigo en tiempo real</small><i class="mNuevo">NUEVO</i>
+      </button>
+    </div>
+    <button id="btnModoX" class="btn ter">Volver</button>
+  </div>
+</section>
+
+<!-- 2 jugadores: sala / invitación -->
+<section id="sDuo" class="screen">
+  <div class="card duoCard" id="duoCaja"></div>
+</section>
+
+<!-- 2 jugadores: resultado -->
+<section id="sDuoFin" class="screen">
+  <div class="card ancha fin duoFin">
+    <div class="finImg"><img id="dfImg" src="img/celebra.webp" alt="Lucas" class="lucasImg media"></div>
+    <div class="finDatos">
+      <h2 id="dfTit">¡HAS GANADO!</h2>
+      <div class="dfVs">
+        <div id="dfYo" class="dfJ yo"><small id="dfYoN">Tú</small><b id="dfYoP">0</b><span id="dfYoS"></span><i>👑</i></div>
+        <div class="dfX">VS</div>
+        <div id="dfEl" class="dfJ el"><small id="dfElN">Rival</small><b id="dfElP">0</b><span id="dfElS"></span><i>👑</i></div>
+      </div>
+      <div class="envio" id="dfEnvio"></div>
+      <button id="dfRev" class="btn jugar peq">REVANCHA</button>
+      <div class="dfEst" id="dfEst"></div>
+      <div class="fila">
+        <button id="dfComp" class="btn sec">Compartir</button>
+        <button id="dfMenu" class="btn ter">Menú</button>
+      </div>
     </div>
   </div>
 </section>
@@ -413,6 +460,6 @@
 </div>
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="game.js?v=38"></script>
+<script src="game.js?v=39"></script>
 </body>
 </html>
